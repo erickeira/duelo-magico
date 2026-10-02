@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { COLORS } from '../config';
 import type { SpellDef } from '../data/content';
+import { spellRoundKey } from '../scenes/PreloadScene';
+import { ArtIcon } from '../scenes/ui';
 
 const R = 40;
 
@@ -13,7 +15,7 @@ export class SpellButton extends Phaser.GameObjects.Container {
   constructor(scene: Phaser.Scene, x: number, y: number, readonly spell: SpellDef, godColor: number) {
     super(scene, x, y);
     this.bg = scene.add.circle(0, 0, R, 0x1f2937).setStrokeStyle(3, godColor);
-    const icon = scene.add.text(0, -4, spell.icon, { fontSize: '40px' }).setOrigin(0.5);
+    const icon = new ArtIcon(scene, 0, 0, R * 2 - 6).set(spellRoundKey(spell.id), spell.icon);
     this.ring = scene.add.graphics();
     this.label = scene.add
       .text(0, 0, '', { fontSize: '24px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 4 })

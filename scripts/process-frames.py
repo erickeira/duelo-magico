@@ -11,29 +11,14 @@ from pathlib import Path
 
 from PIL import Image
 
+from art_utils import chroma_key, crop_to_content
+
 ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "art" / "frames-raw"
 OUT = ROOT / "public" / "assets" / "frames"
 WIDTH = 300  # largura final; a altura segue a proporção
 SOLID = 200  # alfa a partir do qual o pixel conta como parte da moldura
 SLICE_FACTOR = 1.5
-
-
-def chroma_key(img: Image.Image) -> Image.Image:
-    """Transforma o verde puro em transparência, suavizando as bordas e tirando o reflexo verde."""
-    img = img.convert("RGBA")
-    px = img.load()
-    w, h = img.size
-    for y in range(h):
-        for x in range(w):
-            r, g, b, _ = px[x, y]
-            greenness = g - max(r, b)
-            if greenness <= 30:
-                continue
-            alpha = max(0, min(255, int(255 * (1 - (greenness - 30) / 90))))
-            # Reflexo verde nas bordas: limita o verde ao maior dos outros canais.
-            px[x, y] = (r, min(g, max(r, b)), b, alpha)
-    return img
 
 
 def border(img: Image.Image) -> dict:
@@ -65,8 +50,7 @@ def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     meta = {}
     for f in sorted(RAW.glob("*.jpg")):
-        img = chroma_key(Image.open(f))
-        img = img.crop(img.getchannel("A").point(lambda v: 255 if v >= SOLID else 0).getbbox())
+        img = crop_to_content(chroma_key(Image.open(f)), SOLID)
         img = img.resize((WIDTH, round(img.height * WIDTH / img.width)), Image.LANCZOS)
         img.save(OUT / f"{f.stem}.png", optimize=True)
         b = border(img)

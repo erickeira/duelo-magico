@@ -229,3 +229,31 @@ export function showChestReward(scene: Phaser.Scene, r: ChestReward, onClose: ()
   layer.add(ok);
   return layer;
 }
+
+/** Ícone que mostra a arte (se a textura existir) ou cai de volta no emoji. Pode trocar de conteúdo. */
+export class ArtIcon extends Phaser.GameObjects.Container {
+  private img: Phaser.GameObjects.Image;
+  private txt: Phaser.GameObjects.Text;
+
+  constructor(scene: Phaser.Scene, x: number, y: number, readonly size: number) {
+    super(scene, x, y);
+    this.img = scene.add.image(0, 0, '__DEFAULT').setVisible(false);
+    this.txt = scene.add.text(0, 0, '', { fontSize: `${Math.round(size * 0.8)}px` }).setOrigin(0.5);
+    this.add([this.img, this.txt]);
+    scene.add.existing(this);
+  }
+
+  set(key: string | null, emoji: string) {
+    const hasArt = !!key && this.scene.textures.exists(key);
+    if (hasArt) this.img.setTexture(key!).setDisplaySize(this.size, this.size);
+    this.img.setVisible(hasArt);
+    this.txt.setVisible(!hasArt).setText(emoji);
+    return this;
+  }
+
+  setDim(on: boolean) {
+    this.img.setAlpha(on ? 0.35 : 1);
+    this.txt.setAlpha(on ? 0.35 : 1);
+    return this;
+  }
+}

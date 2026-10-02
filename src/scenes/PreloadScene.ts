@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { COLORS, H, W } from '../config';
-import { UNITS } from '../data/content';
+import { CHESTS, GODS, SPELLS, UNITS } from '../data/content';
 import { FRAMES_JSON, RARITY_IDS, frameKey } from './frames';
 
 /** Carrega as artes das cartas e os tokens da batalha (public/assets), com barra de progresso. */
@@ -25,6 +25,18 @@ export class PreloadScene extends Phaser.Scene {
 
     for (const r of RARITY_IDS) this.load.image(frameKey(r), `assets/frames/${r}.png`);
     this.load.json(FRAMES_JSON, 'assets/frames/frames.json');
+    for (const s of SPELLS) {
+      this.load.image(spellIconKey(s.id), `assets/spells/${s.id}.jpg`);
+      this.load.image(spellRoundKey(s.id), `assets/spells/${s.id}.png`);
+    }
+    for (const g of GODS) {
+      this.load.image(godPortraitKey(g.id), `assets/gods/${g.id}.jpg`);
+      this.load.image(godFaceKey(g.id), `assets/gods/${g.id}.png`);
+    }
+    for (const c of CHESTS) this.load.image(chestKey(c.id), `assets/chests/${c.id}.png`);
+    this.load.image(castleKey('player'), 'assets/castles/player.png');
+    this.load.image(castleKey('enemy'), 'assets/castles/enemy.png');
+    this.load.image(GROUND_KEY, 'assets/ground/meadow.jpg');
     for (const u of UNITS) {
       this.load.image(cardKey(u.id), `assets/cards/${u.id}.jpg`);
       this.load.image(tokenKey(u.id), `assets/tokens/${u.id}.png`);
@@ -37,6 +49,13 @@ export class PreloadScene extends Phaser.Scene {
 }
 
 export const cardKey = (id: string) => `card-${id}`;
+export const spellIconKey = (id: string) => `spell-${id}`;
+export const spellRoundKey = (id: string) => `spell-round-${id}`;
+export const godPortraitKey = (id: string) => `god-${id}`;
+export const godFaceKey = (id: string) => `god-face-${id}`;
+export const chestKey = (id: string) => `chest-${id}`;
+export const castleKey = (team: 'player' | 'enemy') => `castle-${team}`;
+export const GROUND_KEY = 'ground-meadow';
 export const tokenKey = (id: string) => `token-${id}`;
 
 /**

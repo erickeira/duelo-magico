@@ -8,7 +8,9 @@ Uso: python3 scripts/process-cards.py
 """
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image
+
+from art_utils import circle
 
 ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "art" / "cards-raw"
@@ -21,7 +23,6 @@ TRIM = {"campea-do-sol": 0.05}
 
 CARD_SIZE = (360, 480)
 TOKEN_SIZE = 128
-SUPERSAMPLE = 4
 
 
 def trim(img: Image.Image, frac: float) -> Image.Image:
@@ -36,14 +37,7 @@ def token(img: Image.Image) -> Image.Image:
     side = int(w * 0.92)
     left = (w - side) // 2
     top = int(h * 0.08)
-    square = img.crop((left, top, left + side, top + side)).resize((TOKEN_SIZE, TOKEN_SIZE), Image.LANCZOS)
-    big = TOKEN_SIZE * SUPERSAMPLE
-    mask = Image.new("L", (big, big), 0)
-    ImageDraw.Draw(mask).ellipse((0, 0, big - 1, big - 1), fill=255)
-    mask = mask.resize((TOKEN_SIZE, TOKEN_SIZE), Image.LANCZOS)
-    out = Image.new("RGBA", (TOKEN_SIZE, TOKEN_SIZE), (0, 0, 0, 0))
-    out.paste(square, (0, 0), mask)
-    return out
+    return circle(img.crop((left, top, left + side, top + side)), TOKEN_SIZE)
 
 
 def main() -> None:

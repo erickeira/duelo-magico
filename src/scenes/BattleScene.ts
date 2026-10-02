@@ -17,6 +17,8 @@ import { activeDeck, getProfile, getSave, updateSave } from '../save/save';
 import { SpellButton } from '../battle/SpellButton';
 import { castSpell, pickAlly } from '../battle/spells';
 import { Unit, type StatusKind, type UnitStats } from '../battle/Unit';
+import { GROUND_KEY, coverImage, godFaceKey } from './PreloadScene';
+import { ArtIcon } from './ui';
 
 interface Projectile {
   obj: Phaser.GameObjects.Arc;
@@ -494,10 +496,17 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
 
   private drawArena() {
     this.add.rectangle(W / 2, H / 2, W, H, 0x0b1020);
-    this.add.rectangle(W / 2, (ARENA_TOP + ARENA_BOTTOM) / 2, W, ARENA_BOTTOM - ARENA_TOP, COLORS.grass);
+    // Chão de grama (arte) ou verde liso como reserva.
+    if (coverImage(this, GROUND_KEY, W, ARENA_BOTTOM - ARENA_TOP, W / 2, (ARENA_TOP + ARENA_BOTTOM) / 2)) {
+      // A grama tem muito detalhe: um véu escuro deixa tropas e trilhas mais legíveis.
+      this.add.rectangle(W / 2, (ARENA_TOP + ARENA_BOTTOM) / 2, W, ARENA_BOTTOM - ARENA_TOP, 0x0b1020, 0.28);
+    } else {
+      this.add.rectangle(W / 2, (ARENA_TOP + ARENA_BOTTOM) / 2, W, ARENA_BOTTOM - ARENA_TOP, COLORS.grass);
+    }
     const g = this.add.graphics();
     for (const y of LANES_Y) {
-      g.fillStyle(COLORS.lane, 0.55).fillRect(ARENA_LEFT, y - LANE_HEIGHT / 2 + 25, ARENA_RIGHT - ARENA_LEFT, LANE_HEIGHT - 50);
+      g.fillStyle(COLORS.lane, 0.72).fillRoundedRect(ARENA_LEFT, y - LANE_HEIGHT / 2 + 25, ARENA_RIGHT - ARENA_LEFT, LANE_HEIGHT - 50, 18);
+      g.lineStyle(3, 0x3f2f1a, 0.6).strokeRoundedRect(ARENA_LEFT, y - LANE_HEIGHT / 2 + 25, ARENA_RIGHT - ARENA_LEFT, LANE_HEIGHT - 50, 18);
     }
     g.lineStyle(3, 0xffffff, 0.25);
     for (let y = ARENA_TOP + 10; y < ARENA_BOTTOM; y += 30) g.lineBetween(MID_X, y, MID_X, y + 15);
@@ -508,8 +517,8 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
     const pGod = godById(this.loadouts.player.god)!;
     const eGod = godById(this.loadouts.enemy.god)!;
     this.add.rectangle(W / 2, HUD_HEIGHT / 2, W, HUD_HEIGHT, COLORS.ui).setDepth(60);
-    this.add.text(14, HUD_HEIGHT / 2, `${pGod.icon}`, { fontSize: '30px' }).setOrigin(0, 0.5).setDepth(61);
-    this.add.text(W - 14, HUD_HEIGHT / 2, `${eGod.icon}`, { fontSize: '30px' }).setOrigin(1, 0.5).setDepth(61);
+    new ArtIcon(this, 34, HUD_HEIGHT / 2, 46).set(godFaceKey(pGod.id), pGod.icon).setDepth(61);
+    new ArtIcon(this, W - 34, HUD_HEIGHT / 2, 46).set(godFaceKey(eGod.id), eGod.icon).setDepth(61);
     this.timerText = this.add
       .text(W / 2, HUD_HEIGHT / 2 - 6, '', { fontSize: '30px', fontStyle: 'bold', color: '#ffffff' })
       .setOrigin(0.5).setDepth(61);

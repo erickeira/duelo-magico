@@ -1,0 +1,75 @@
+{
+  "model": "gemini-3-pro-image-preview",
+  "image_size": "1K",
+  "style": "Stylized 2D cartoon fantasy art for a mobile strategy game: bold clean outlines, vibrant saturated colors, soft cel shading. Absolutely no text, no letters, no numbers, no watermark, no card frame, no border.",
+  "spells": {
+    "aspect_ratio": "1:1",
+    "template": "Square spell icon, full-bleed illustration filling the entire canvas edge to edge. Subject: {subject}, centered and large. Background: {background}. {style}",
+    "backgrounds": {
+      "ignar": "radial gradient of deep crimson red and bright orange with embers",
+      "solenne": "radial gradient of warm gold and soft white light",
+      "hyela": "radial gradient of icy pale blue and deep blue with snow sparkles",
+      "thalor": "radial gradient of lush forest green and dark green with drifting leaves"
+    },
+    "subjects": {
+      "cometa-rubro": "a blazing red comet with a fiery trail falling diagonally from the sky",
+      "brado-guerra": "a war horn blowing glowing orange sound waves and flames",
+      "muralha-fogo": "a tall wall of roaring flames",
+      "sopro-vulcao": "an erupting volcano blasting a burst of lava and fire",
+      "juizo-cinzas": "three flaming meteors raining down onto glowing ashes",
+      "escudo-aurora": "a radiant golden shield with a sunrise emblem glowing with light",
+      "martelo-celeste": "a glowing golden celestial hammer striking down from the clouds with light rays",
+      "bencao-luz": "a glowing pink and gold heart surrounded by healing light sparkles",
+      "falange-luz": "three spears made of pure light standing in formation behind a glowing shield",
+      "alvorada": "a brilliant sunrise over fluffy clouds with golden rays",
+      "vento-gelido": "a swirling icy wind gust full of snowflakes",
+      "lancas-gelo": "three sharp ice spears flying horizontally to the right",
+      "prisao-cristal": "a shadowy creature silhouette frozen inside a cube of blue ice crystal",
+      "coracao-glacial": "a glowing faceted heart made of blue ice crystal",
+      "era-gelo": "a giant glowing snowflake above frozen icicles",
+      "raizes": "thick magical green roots bursting from the ground and twisting upward",
+      "forca-selvagem": "a muscular arm wrapped in glowing green leafy vines flexing",
+      "revoada": "a flock of ghostly glowing spirit ravens flying",
+      "investida-alce": "a charging spectral moose with glowing green antlers",
+      "chamado-ancestral": "an ancient giant tree guardian spirit with glowing eyes"
+    }
+  },
+  "gods": {
+    "aspect_ratio": "3:4",
+    "template": "Full-bleed character portrait that fills the entire canvas edge to edge, head and upper body, facing slightly right, majestic and divine. Subject: {subject}. Background: {background}. {style}",
+    "subjects": {
+      "ignar": "Ignar, a god who was once a blacksmith, body of living embers with cracked skin glowing with lava, a crown of flames, fiery beard, holding a huge forge hammer",
+      "solenne": "Solenne, a serene goddess of the dawn, golden sun halo behind her head, white and gold veil, gentle smile, holding a glowing lantern",
+      "hyela": "Hyela, a regal ice queen goddess wearing high-collared crystal armor and a long frost cape, crown of icicles, frost-white hair, calm glowing ice-blue eyes, holding an ice scepter",
+      "thalor": "Thalor, a gentle god of beasts, tall humanoid with large deer antlers covered in leaves, moss cloak, wise glowing green eyes, wooden staff"
+    },
+    "backgrounds": {
+      "ignar": "radial gradient of deep red and orange with embers",
+      "solenne": "radial gradient of warm gold and soft white light",
+      "hyela": "radial gradient of icy blue and deep blue with snow",
+      "thalor": "radial gradient of forest green with drifting leaves"
+    }
+  },
+  "chests": {
+    "aspect_ratio": "1:1",
+    "template": "Game item: {subject}, closed, three-quarter front view, centered, filling about 80 percent of the image. The background is a perfectly flat solid pure green color #00FF00 with no shadows and no gradient. {style}",
+    "subjects": {
+      "madeira": "a sturdy wooden treasure chest with dark iron bands and a simple lock",
+      "prata": "a polished silver treasure chest with blue sapphire inlays and an ornate lock",
+      "ouro": "a gleaming golden treasure chest with red ruby gems and ornate engravings",
+      "divino": "a divine treasure chest of white marble and gold with glowing celestial runes, small wings and a radiant aura"
+    }
+  },
+  "castles": {
+    "aspect_ratio": "9:16",
+    "template": "Tall vertical fantasy castle fortress seen from the front, a thick stone wall with battlements and two round towers stacked vertically, wooden gate in the middle, {subject}. Centered, filling the height of the image. The background is a perfectly flat solid pure green color #00FF00 with no shadows and no gradient. {style}",
+    "subjects": {
+      "player": "royal blue banners and blue roof tiles",
+      "enemy": "crimson red banners and red roof tiles"
+    }
+  },
+  "ground": {
+    "aspect_ratio": "16:9",
+    "prompt": "Top-down view of a grassy fantasy meadow battlefield texture, stylized cartoon grass with small flowers, pebbles and a few tufts, evenly lit, uniform density across the whole image, no paths, no roads, no characters, no buildings, no trees. Stylized 2D cartoon art for a mobile strategy game with vibrant saturated colors. No text, no watermark."
+  }
+}

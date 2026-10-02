@@ -64,14 +64,14 @@ Depois de mudar, meça com a [simulação IA × IA](/tecnico/arquitetura#simulac
 
 As tropas já têm arte: carta (`public/assets/cards/<id>.jpg`) e token da batalha (`public/assets/tokens/<id>.png`), carregados pela `PreloadScene` com as chaves `card-<id>` e `token-<id>`. Uma tropa nova só precisa da imagem com o mesmo id; sem ela, o jogo mostra o emoji. O passo a passo da geração está em [Arte e áudio](/arte-audio#producao).
 
-## Dar animação a uma tropa
+## Trocar os tokens por sprites animados
 
-O passo a passo completo (Meshy → rig → renderizador) está em [Arte e áudio](/arte-audio#sprites-animadas). Em resumo, para a tropa `<id>`:
+Hoje cada tropa em campo é um token redondo parado (`Unit.ts`), e o castelo é um retângulo (`Castle.ts`).
 
-1. Salve o GLB com rig em `art/models/<id>.glb`.
-2. Em `tools/sprite-renderer/rigs.ts`, acrescente o mapa de ossos em `RIGS` (e, se o corpo for diferente, um conjunto de animações próprio, como o `HEAVY_ANIMS`).
-3. Rode `http://localhost:5180/tools/sprite-renderer/?model=<id>&save=1` com o `npm run dev` ligado.
+1. Coloque as folhas de sprites em `public/assets/` (ex.: `public/assets/units/cavaleiro.png`).
+2. Carregue-as na `PreloadScene` com `this.load.spritesheet(...)`, ao lado das cartas e tokens.
+3. Use o próprio id da tropa na chave da textura, para não precisar de campo novo nos dados.
+4. Em `Unit.ts`, troque o `portrait` (token) por `scene.add.sprite(0, lift, ...)`. Desenhe os sprites olhando para a direita e use `setFlipX(team === 'enemy')` para a IA, como já é feito com o token.
+5. Para animações (andar e atacar), use `this.anims.create` na preload e `sprite.play('cavaleiro-andar')` no `updateUnit`/`attack`.
 
-Nenhuma mudança de código no jogo é necessária: com `<id>` no `public/assets/sprites/manifest.json`, a `Unit` usa a sprite animada automaticamente (`setAnim`, `playAttack`, `freezeAnim`, `playDeath`), e sem ele continua com o token.
-
-A lógica não depende do visual: as animações só leem o estado da tropa (andando, atacando, congelada, morta).
+A lógica não depende do visual. Só `Unit`, `Castle`, `CardView` e `SpellButton` precisam mudar.

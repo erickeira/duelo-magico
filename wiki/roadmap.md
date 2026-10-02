@@ -50,9 +50,7 @@ Na v0.3, todas as tropas, deuses e magias ficam liberados. Os desbloqueios por t
 - [x] Arte das 24 tropas (Gemini Nano Banana Pro): cartas, miniaturas, ficha da coleção, tokens na batalha e wiki ([como foi feita](/arte-audio#producao))
 - [x] Molduras ornamentadas por raridade (nine-slice) nas cartas, miniaturas, coleção e wiki
 - [ ] Arte dos deuses, magias, castelos, cenário e baús
-- [x] Fluxo 3D → sprites animadas (Meshy + renderizador three.js) e primeira tropa animada: Golem ([como funciona](/arte-audio#sprites-animadas))
-- [ ] Modelos 3D e animações das outras 23 tropas
-- [ ] Animações de interface (Rive nas telas, a decidir) e efeitos visuais
+- [ ] Animações (Rive nas telas, a decidir) e efeitos visuais ([Arte e áudio](/arte-audio))
 - [ ] Música e efeitos sonoros
 - [ ] App Android/iOS com Capacitor ([Mobile](/tecnico/mobile)), testado em aparelho real
 

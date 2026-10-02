@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
 import { COLORS } from '../config';
-import { Card } from '../data/cards';
+import { rarityById, type UnitDef } from '../data/content';
 
 export const CARD_W = 110;
 export const CARD_H = 128;
+
+const hex = (css: string) => Number.parseInt(css.slice(1), 16);
 
 export class CardView extends Phaser.GameObjects.Container {
   private bg: Phaser.GameObjects.Rectangle;
@@ -11,14 +13,15 @@ export class CardView extends Phaser.GameObjects.Container {
   private label: Phaser.GameObjects.Text;
   private cost: Phaser.GameObjects.Text;
   private baseY: number;
+  private rarityColor = 0x4b5563;
 
   constructor(scene: Phaser.Scene, x: number, y: number, small = false) {
     super(scene, x, y);
     this.baseY = y;
-    this.bg = scene.add.rectangle(0, 0, CARD_W, CARD_H, 0x1f2937).setStrokeStyle(3, 0x4b5563);
+    this.bg = scene.add.rectangle(0, 0, CARD_W, CARD_H, 0x1f2937).setStrokeStyle(3, this.rarityColor);
     this.icon = scene.add.text(0, -12, '', { fontSize: '44px' }).setOrigin(0.5);
     this.label = scene.add
-      .text(0, 42, '', { fontSize: '15px', fontStyle: 'bold', color: '#e5e7eb', align: 'center' })
+      .text(0, 42, '', { fontSize: '14px', fontStyle: 'bold', color: '#e5e7eb', align: 'center', wordWrap: { width: CARD_W - 8 } })
       .setOrigin(0.5);
     const gem = scene.add.circle(-CARD_W / 2 + 14, -CARD_H / 2 + 14, 16, COLORS.mana).setStrokeStyle(2, 0xffffff);
     this.cost = scene.add
@@ -31,11 +34,11 @@ export class CardView extends Phaser.GameObjects.Container {
     this.setDepth(50);
   }
 
-  setCard(card: Card) {
+  setCard(card: UnitDef) {
     this.icon.setText(card.icon);
-    this.label.setText(card.name);
+    this.label.setText(card.count > 1 ? `${card.name} ×${card.count}` : card.name);
     this.cost.setText(String(card.cost));
-    this.bg.setFillStyle(card.kind === 'spell' ? 0x3b1f4a : 0x1f2937);
+    this.rarityColor = hex(rarityById(card.rarity).color);
   }
 
   setPlayable(on: boolean) {
@@ -43,7 +46,7 @@ export class CardView extends Phaser.GameObjects.Container {
   }
 
   setSelected(on: boolean) {
-    this.bg.setStrokeStyle(on ? 5 : 3, on ? COLORS.gold : 0x4b5563);
+    this.bg.setStrokeStyle(on ? 5 : 3, on ? COLORS.gold : this.rarityColor);
     this.y = on ? this.baseY - 10 : this.baseY;
   }
 }

@@ -1,20 +1,20 @@
 import Phaser from 'phaser';
 import { HAND_SIZE, MAX_MANA, START_MANA } from '../config';
-import { CARDS, Card } from '../data/cards';
+import { unitById, type UnitDef } from '../data/content';
 
 /** Mana + mão de cartas de um lado. Lógica pura, sem renderização. */
 export class Hand {
   mana = START_MANA;
-  hand: Card[];
-  private queue: Card[];
+  hand: UnitDef[];
+  private queue: UnitDef[];
 
   constructor(deckIds: string[]) {
-    const deck = Phaser.Utils.Array.Shuffle(deckIds.map((id) => CARDS[id]));
+    const deck = Phaser.Utils.Array.Shuffle(deckIds.map((id) => unitById(id)!));
     this.hand = deck.slice(0, HAND_SIZE);
     this.queue = deck.slice(HAND_SIZE);
   }
 
-  get next(): Card {
+  get next(): UnitDef {
     return this.queue[0];
   }
 
@@ -28,7 +28,7 @@ export class Hand {
   }
 
   /** Gasta a mana e repõe a carta usada com a próxima da fila. */
-  play(index: number): Card {
+  play(index: number): UnitDef {
     const card = this.hand[index];
     this.mana -= card.cost;
     this.queue.push(card);

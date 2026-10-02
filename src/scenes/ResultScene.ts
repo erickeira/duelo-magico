@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { COLORS, H, W } from '../config';
+import type { BattleSettings } from '../battle/Loadout';
 import type { BattleResult } from './BattleScene';
 import { button } from './ui';
 
@@ -7,6 +8,7 @@ interface ResultData {
   result: BattleResult;
   playerHp: number;
   enemyHp: number;
+  settings: BattleSettings;
 }
 
 const TITLES: Record<BattleResult, [string, string]> = {
@@ -29,7 +31,7 @@ export class ResultScene extends Phaser.Scene {
         fontSize: '26px', color: '#cbd5e1',
       })
       .setOrigin(0.5);
-    button(this, W / 2, 440, 'JOGAR DE NOVO', COLORS.player, () => this.scene.start('Battle'));
-    button(this, W / 2, 560, 'MENU', 0x374151, () => this.scene.start('Menu'));
+    button(this, W / 2, 440, 'JOGAR DE NOVO', COLORS.player, () => this.scene.start('Battle', { ...data.settings }));
+    button(this, W / 2, 560, 'MENU', 0x374151, () => this.scene.start('Menu', { ...data.settings }));
   }
 }

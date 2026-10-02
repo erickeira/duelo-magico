@@ -3,7 +3,7 @@
 Todo o conteúdo do jogo (tropas, magias, deuses, progressão, economia e regras) vive em **`src/data/content/`**, em TypeScript. **Essa é a fonte única**:
 
 - a **wiki** importa esses arquivos e gera as tabelas e os cards (por isso os números aqui nunca ficam desatualizados);
-- o **jogo** vai importar os mesmos arquivos a partir da v0.2.
+- o **jogo** importa os mesmos arquivos (desde a v0.2). Comportamentos especiais ficam em `src/battle/abilities.ts` e `src/battle/spells.ts` (ver [Como estender](/tecnico/estender)).
 
 ```
 src/data/content/

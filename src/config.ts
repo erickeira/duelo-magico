@@ -1,5 +1,7 @@
-// Layout (paisagem, 1280x720) e regras gerais da partida.
-// O castelo do jogador fica à esquerda e o da IA à direita; as tropas andam no eixo X.
+import { BATTLE_RULES, CASTLE_BASE_HP } from './data/content';
+
+// Layout (paisagem, 1280x720). O castelo do jogador fica à esquerda e o da IA à direita;
+// as tropas andam no eixo X. As regras da partida vêm de src/data/content/rules.ts.
 export const W = 1280;
 export const H = 720;
 
@@ -13,18 +15,21 @@ export const ARENA_LEFT = 170; // frente do castelo do jogador
 export const ARENA_RIGHT = 1110; // frente do castelo inimigo
 export const MID_X = (ARENA_LEFT + ARENA_RIGHT) / 2;
 export const CARD_AREA_Y = 550;
+/** Distância mínima entre a tropa invocada e a tropa inimiga mais avançada. */
+export const SPAWN_MARGIN = 40;
 
-export const MATCH_TIME = 180;
-export const DOUBLE_MANA_AT = 60; // últimos N segundos com mana em dobro
-export const MAX_MANA = 10;
-export const START_MANA = 5;
-export const MANA_PER_SEC = 1 / 1.4;
-export const HAND_SIZE = 4;
+export const MATCH_TIME = BATTLE_RULES.matchSeconds;
+export const DOUBLE_MANA_AT = BATTLE_RULES.doubleManaLastSeconds;
+export const OVERTIME = BATTLE_RULES.overtimeSeconds;
+export const MAX_MANA = BATTLE_RULES.maxMana;
+export const START_MANA = BATTLE_RULES.startMana;
+export const MANA_PER_SEC = 1 / BATTLE_RULES.secondsPerMana;
+export const HAND_SIZE = BATTLE_RULES.handSize;
 
-export const CASTLE_HP = 3000;
-export const CASTLE_RANGE = 240;
-export const CASTLE_DAMAGE = 45;
-export const CASTLE_ATTACK_INTERVAL = 0.9;
+export const CASTLE_HP = CASTLE_BASE_HP;
+export const CASTLE_RANGE = BATTLE_RULES.castleRange;
+export const CASTLE_DAMAGE = BATTLE_RULES.castleDamage;
+export const CASTLE_ATTACK_INTERVAL = BATTLE_RULES.castleAttackInterval;
 
 export const COLORS = {
   player: 0x3b82f6,
@@ -37,3 +42,6 @@ export const COLORS = {
   gold: 0xfacc15,
   ui: 0x111827,
 };
+
+export type Team = 'player' | 'enemy';
+export const other = (t: Team): Team => (t === 'player' ? 'enemy' : 'player');

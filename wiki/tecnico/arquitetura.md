@@ -1,104 +1,134 @@
 # Arquitetura
 
-::: info
-Descreve o código do **protótipo (v0.1)**. A organização dos dados do jogo final está em [Dados do jogo](/tecnico/dados).
-:::
-
 ## Stack
 
 - **Phaser 3**: renderização (WebGL/Canvas), cenas, tweens e input por toque e mouse.
 - **TypeScript** (strict) e **Vite** (dev server e build).
 - Resolução lógica **1280×720 (paisagem)** com `Scale.FIT`. Todo o código usa essas coordenadas, e o Phaser ajusta para a tela do aparelho.
 - As tropas andam no **eixo X**: `Unit.dir` vale `+1` para o jogador (para a direita) e `-1` para a IA. As trilhas são definidas pelo **y** (`LANES_Y`).
+- O conteúdo (tropas, magias, deuses e regras) vem de **`src/data/content/`**, a mesma fonte da wiki (ver [Dados do jogo](/tecnico/dados)).
 
 ## Cenas
 
 ```
-MenuScene ──BATALHAR──▶ BattleScene ──fim──▶ ResultScene
-     ▲                       ▲                    │
-     └────────MENU───────────┴───JOGAR DE NOVO────┘
+MenuScene ──BATALHAR {deus, dificuldade}──▶ BattleScene ──fim──▶ ResultScene
+     ▲                                          ▲                    │
+     └──────────────MENU────────────────────────┴───JOGAR DE NOVO────┘
 ```
 
-`BattleScene.init()` zera todo o estado, porque o Phaser reaproveita a instância da cena entre partidas.
+- `MenuScene`: escolha rápida de deus (usa o 1º deck sugerido dele) e de dificuldade. Será substituída pela tela de deck na v0.3.
+- `BattleScene.init()` zera todo o estado, porque o Phaser reaproveita a instância da cena entre partidas.
 
 ## Layout (px lógicos)
 
 ```
-y 0–56     HUD: vida do jogador | cronômetro / MANA x2 | vida da IA
+y 0–56     HUD: deus | vida do jogador | cronômetro / MANA x2 / PRORROGAÇÃO | vida da IA | deus
 y 60–540   ┌─castelo─┐ ═══ trilha 0 (y=140) ═══ ┊ ═══════════ ┌─castelo─┐
            │ jogador │ ═══ trilha 1 (y=300) ═══ ┊ ═══════════ │   IA    │
            └─────────┘ ═══ trilha 2 (y=460) ═══ ┊ ═══════════ └─────────┘
               x 20–170  ↑ARENA_LEFT=170      MID_X   ARENA_RIGHT=1110↑
-y 550–720  barra de mana · próxima carta · mão com 4 cartas
+y 550–720  [magia][magia]   próxima · mana · mão com 4 cartas
 ```
 
-| Constante | Valor | Significado |
-|---|---|---|
-| `ARENA_LEFT` | 170 | Frente do castelo do jogador |
-| `ARENA_RIGHT` | 1110 | Frente do castelo da IA |
-| `ARENA_TOP` / `ARENA_BOTTOM` | 60 / 540 | Limites verticais da arena |
-| `LANES_Y` | 140, 300, 460 | Centro de cada trilha |
-| `CARD_AREA_Y` | 550 | Início da área de cartas |
+## Módulos da batalha (`src/battle/`)
+
+| Arquivo | Responsabilidade |
+|---|---|
+| `Loadout.ts` | O que cada lado leva: deus, 2 magias, 8 tropas e nível das magias. `loadoutForGod()` usa o deck sugerido do deus. |
+| `Hand.ts` | Mana, mão de 4 cartas e fila (com `UnitDef`). |
+| `Unit.ts` | Uma tropa: atributos, vida, **escudo**, **status** com expiração, **buffs**, tempo de vida (construções e invocações) e desenho dos anéis de status. |
+| `Castle.ts` | Vida, cura, dano e barra no HUD. |
+| `api.ts` | Interface `BattleApi`, tudo o que habilidades, magias e IA podem fazer na batalha. |
+| `abilities.ts` | Ganchos das habilidades por id de tropa (`onSpawn`, `onTick`, `onAttack`, `onHit`, `onKill`, `onDeath`, `modifyDamage`) e a aura do Paladino. |
+| `spells.ts` | As 20 magias (`castSpell`) com evoluções, mais efeitos reutilizáveis: zona de fogo, algo que atravessa a trilha, efeito atrasado e invocações. |
+| `Ai.ts` | Jogador controlado pelo computador, com 3 perfis de dificuldade. Pode controlar **qualquer lado** (útil para simular IA × IA). |
+| `CardView.ts`, `SpellButton.ts` | Interface da carta (moldura com a cor da raridade) e do botão de magia (anel de recarga). |
 
 ## Loop de jogo (`BattleScene.update`)
 
-A cada frame, com `dt` limitado a 50 ms para não "teleportar" depois de uma travada:
+A cada quadro, com `dt` limitado a 50 ms:
 
-1. Desconta o cronômetro e calcula a taxa de mana (dobrada no fim).
-2. `Hand.update` regenera a mana dos dois lados.
-3. `Ai.update` deixa a IA decidir e talvez chamar `playCard('enemy', ...)`.
-4. `updateUnit` em cada tropa: congelamento, busca de alvo (`findTarget`), depois ataque ou movimento.
-5. `updateCastle`: a torre atira no inimigo mais próximo.
-6. `updateProjectiles`: move os projéteis e aplica o dano (`hit`) na chegada.
-7. `removeDead` remove as unidades com `alive = false` e mostra um efeito.
-8. `refreshHud` e `checkEnd`.
+1. `now += dt` (segundos de partida, incluindo a prorrogação).
+2. Mana dos dois lados (dobrada no último minuto).
+3. `Ai.update`.
+4. `updateUnit` em cada tropa:
+   1. buffs e escudos vencidos;
+   2. invocações expiradas (`onExpire`) e construções perdendo vida;
+   3. se atordoada ou congelada, para aqui;
+   4. `onTick` da habilidade;
+   5. busca de alvo (provocador → inimigo à frente na trilha → castelo);
+   6. ataque ou movimento.
+5. Castelos atiram.
+6. Projéteis.
+7. Efeitos contínuos (`ArenaEffect`). Efeitos criados durante o update entram na lista sem se perder.
+8. Remoção de mortos (`onDeath`, exceto em quem expirou).
+9. Dreno da prorrogação.
+10. Redesenho de status, HUD e verificação de fim.
 
-## Responsabilidades
+## Dano (`BattleScene.dealDamage`)
 
-| Arquivo | Responsabilidade | Depende de Phaser? |
-|---|---|---|
-| `config.ts` | Constantes de layout e regras | não |
-| `data/cards.ts` | Tipos e dados das cartas | não |
-| `battle/Hand.ts` | Mana, mão e fila | só para embaralhar |
-| `battle/Unit.ts` | Estado da tropa e visual (Container) | sim |
-| `battle/Castle.ts` | Vida e visual do castelo | sim |
-| `battle/Ai.ts` | Decisões do oponente | não (lê a cena) |
-| `battle/CardView.ts` | Visual da carta | sim |
-| `scenes/BattleScene.ts` | Regras de combate, input e HUD | sim |
-
-### Interface `Damageable`
-
-Tudo que pode levar dano (tropas e castelo) implementa:
-
-```ts
-interface Damageable {
-  team: Team; alive: boolean; flying: boolean;
-  takeDamage(amount: number): void;
-  aimPoint(along: number): { x: number; y: number }; // onde o projétil mira (along = y de quem atira)
-}
+```
+dano × multiplicador fixo da tropa (ex.: Lanceiros de Luz evoluídos 0,8)
+     × aura do Paladino (0,8 se houver um aliado Paladino a até 100 px)
+     × vulnerável (+X% se congelado)
+  → escudo absorve primeiro (onBreak ao quebrar)
+  → armadura de gelo deixa o atacante lento
+  → vida; se morrer, onKill do atacante
 ```
 
-O castelo devolve um ponto na sua linha de frente na mesma altura (y) de quem atira, então os projéteis não convergem todos para o centro.
+Cura e escudo recebidos caem 50% com `healReduction` (Sopro Necrótico).
 
-### Única porta de entrada para jogadas
+## Status (`Unit.setStatus`)
 
-`BattleScene.playCard(team, index, x, y)` é usado **tanto pelo input do jogador quanto pela IA**. Ele valida a mana, consome a carta e decide entre `spawnUnits` (só o `y` importa, para escolher a trilha) e `castSpell`. Quando houver multiplayer, este é o ponto que vai receber os comandos da rede.
+`slow`, `attackSlow`, `root`, `stun`, `freeze`, `healReduction`, `ccImmune`, `steadfast`, `vulnerable`, `grounded`, `taunt`, `chillArmor` e `slowingAttacks`.
+
+Status iguais não se somam: vale o maior valor, e a duração é renovada. `ccImmune` bloqueia lentidão, prisão, atordoamento, congelamento e empurrão; `steadfast` bloqueia atordoamento e empurrão.
+
+## Pontos únicos de entrada
+
+- `BattleScene.playCard(team, index, x, y)`: invoca uma carta. A trilha vem do `y`, e o `x` é ajustado para a **zona de invocação** (`spawnZone`).
+- `BattleScene.castSpellAt(team, index, x, y)`: lança uma magia, se a recarga permitir.
+
+Jogador e IA usam os mesmos dois métodos. No PvP online, eles serão os comandos enviados pela rede.
 
 ## Depuração
 
-Em modo dev o jogo fica exposto como `window.game`. Exemplos para o console:
+Em modo dev o jogo fica exposto como `window.game`:
 
 ```js
 const b = game.scene.getScene('Battle');
-b.timeLeft = 65;                       // pula para perto da mana dobrada
-b.hands.player.mana = 10;              // mana cheia
-b.playCard('player', 0, 600, 300);     // joga a 1ª carta na trilha do meio (y=300)
-b.units.map(u => [u.team, u.stats.icon, u.hp]);
+b.now = 175;                          // pula para perto da prorrogação
+b.hands.player.mana = 10;             // mana cheia
+b.spells.player[0].readyAt = 0;       // magia pronta
+b.playCard('player', 0, 400, 300);    // 1ª carta na trilha do meio
+b.castSpellAt('player', 0, 700, 300); // 1ª magia no ponto (700, 300)
 ```
+
+Para testar as evoluções das magias, abra o jogo com `?nivelMagia=5`.
+
+### Simulação IA × IA (balanceamento) {#simulacao}
+
+Com a simulação manual (cena pausada e `update` chamado em laço), uma partida inteira roda em menos de um segundo:
+
+```js
+const { Ai } = await import('/src/battle/Ai.ts');
+game.scene.start('Battle', { god: 'ignar', difficulty: 'normal' });
+// depois de a cena iniciar:
+const b = game.scene.getScene('Battle');
+b.sys.pause();
+const jogador = new Ai(b, b.hands.player, 'normal', 'player');
+while (!b.over) { jogador.update(0.05); b.update(0, 50); }
+[b.now, b.castles.player.hp, b.castles.enemy.hp];
+```
+
+Medição de referência (v0.2, 16 partidas IA normal × IA normal, deuses alternados):
+- duração média de **110 s** (de 51 a 187 s);
+- 1 partida foi para a prorrogação;
+- muitas terminaram com o vencedor intacto, sinal de efeito "bola de neve" a ajustar no balanceamento.
 
 ## Decisões e limitações conhecidas
 
-- **Sem física:** movimento e colisão são 1D (eixo x) por trilha, o que deixa a simulação simples e determinística o bastante para multiplayer no futuro.
+- **Sem física:** movimento e colisão são 1D (eixo x) por trilha, o que deixa a simulação simples.
 - Tropas aliadas podem se sobrepor, porque não há empurrão entre elas.
-- A simulação usa `dt` variável. Para PvP online, o ideal é migrar para um passo fixo (ex.: 20 ticks/s) e separar a simulação da renderização (ver [Roadmap](/roadmap#v3-pvp-online)).
-- O bundle tem cerca de 1,2 MB porque o Phaser inteiro vem junto. Dá para reduzir com um build customizado do Phaser se precisar.
+- A simulação usa `dt` variável e `Math.random` (na IA e no embaralhamento). Para PvP online, o ideal é migrar para um passo fixo e um gerador aleatório com semente (ver [Roadmap](/roadmap#v3-pvp-online)).
+- O bundle tem cerca de 1,2 MB porque o Phaser inteiro vem junto.

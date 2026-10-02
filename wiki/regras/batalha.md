@@ -60,7 +60,7 @@ Os números destacados vêm direto de `src/data/content/rules.ts`.
 - Magias **não gastam mana**. Cada uma tem:
   - **recarga inicial**: segundos desde o início da partida até o primeiro uso;
   - **recarga**: segundos entre usos.
-- Os botões das magias ficam acima da mão de cartas, com um anel de recarga.
+- Os botões das magias ficam à esquerda da mão de cartas, com um anel de recarga e os segundos restantes.
 - O alvo depende da magia: ponto, trilha inteira, tropa aliada, arena inteira ou castelo. Veja a [lista de magias](/magias/).
 
 ## Combate

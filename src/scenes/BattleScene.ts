@@ -1,48 +1,70 @@
 import Phaser from 'phaser';
 import {
   ARENA_BOTTOM, ARENA_LEFT, ARENA_RIGHT, ARENA_TOP, CARD_AREA_Y, CASTLE_ATTACK_INTERVAL, CASTLE_DAMAGE, CASTLE_RANGE,
-  COLORS, DOUBLE_MANA_AT, H, HAND_SIZE, HUD_HEIGHT, LANES_Y, LANE_HEIGHT, MANA_PER_SEC, MATCH_TIME, MAX_MANA, MID_X, W,
+  COLORS, DOUBLE_MANA_AT, H, HAND_SIZE, HUD_HEIGHT, LANES_Y, LANE_HEIGHT, MANA_PER_SEC, MATCH_TIME, MAX_MANA, MID_X, OVERTIME,
+  SPAWN_MARGIN, W, other, type Team,
 } from '../config';
-import { Card, DEFAULT_DECK, SpellCard, Team, UnitCard } from '../data/cards';
+import { BATTLE_RULES, godById, spellById, type SpellDef, type UnitDef } from '../data/content';
+import { ABILITIES, auraDamageMult } from '../battle/abilities';
 import { Ai } from '../battle/Ai';
+import type { ArenaEffect, BattleApi, SpawnOptions } from '../battle/api';
 import { CARD_W, CardView } from '../battle/CardView';
 import { Castle } from '../battle/Castle';
 import { Hand } from '../battle/Hand';
-import { Damageable, Unit } from '../battle/Unit';
+import { loadoutForGod, randomGod, type BattleSettings, type Loadout } from '../battle/Loadout';
+import { SpellButton } from '../battle/SpellButton';
+import { castSpell, pickAlly } from '../battle/spells';
+import { Unit, type StatusKind, type UnitStats } from '../battle/Unit';
 
 interface Projectile {
   obj: Phaser.GameObjects.Arc;
-  target: Damageable;
+  target: Unit | Castle;
   aim: { x: number; y: number };
   team: Team;
   damage: number;
   splash: number;
   hitsAir: boolean;
+  source: Unit | null;
 }
+
+export interface SpellSlot {
+  def: SpellDef;
+  readyAt: number;
+  total: number;
+}
+
+type Selection = { kind: 'card' | 'spell'; index: number } | null;
 
 export type BattleResult = 'win' | 'lose' | 'draw';
 
-const other = (t: Team): Team => (t === 'player' ? 'enemy' : 'player');
 const PROJECTILE_SPEED = 650;
+const hex = (css: string) => Number.parseInt(css.slice(1), 16);
 
-export class BattleScene extends Phaser.Scene {
+export class BattleScene extends Phaser.Scene implements BattleApi {
   units: Unit[] = [];
+  castles!: Record<Team, Castle>;
+  now = 0;
+  settings!: BattleSettings;
+  loadouts!: Record<Team, Loadout>;
+  hands!: Record<Team, Hand>;
+  spells!: Record<Team, SpellSlot[]>;
+
   private projectiles: Projectile[] = [];
-  private castles!: Record<Team, Castle>;
-  private hands!: Record<Team, Hand>;
+  private effects: ArenaEffect[] = [];
   private ai!: Ai;
-  private timeLeft = MATCH_TIME;
   private over = false;
+  private overtimeAnnounced = false;
 
   // UI
-  private selected: number | null = null;
+  private selection: Selection = null;
   private dragging = false;
   private cardViews: CardView[] = [];
+  private spellButtons: SpellButton[] = [];
   private nextView!: CardView;
   private manaBar!: Phaser.GameObjects.Graphics;
   private manaText!: Phaser.GameObjects.Text;
   private timerText!: Phaser.GameObjects.Text;
-  private doubleText!: Phaser.GameObjects.Text;
+  private phaseText!: Phaser.GameObjects.Text;
   private preview!: Phaser.GameObjects.Graphics;
   private ghost!: Phaser.GameObjects.Text;
 
@@ -50,21 +72,34 @@ export class BattleScene extends Phaser.Scene {
     super('Battle');
   }
 
-  init() {
+  init(data: Partial<BattleSettings>) {
+    this.settings = { god: data.god ?? 'ignar', difficulty: data.difficulty ?? 'normal' };
     this.units = [];
     this.projectiles = [];
-    this.timeLeft = MATCH_TIME;
+    this.effects = [];
+    this.now = 0;
     this.over = false;
-    this.selected = null;
+    this.overtimeAnnounced = false;
+    this.selection = null;
     this.dragging = false;
     this.cardViews = [];
+    this.spellButtons = [];
   }
 
   create() {
+    const player = loadoutForGod(this.settings.god);
+    const enemy = { ...loadoutForGod(randomGod()), spellLevel: player.spellLevel };
+    this.loadouts = { player, enemy };
     this.drawArena();
     this.castles = { player: new Castle(this, 'player'), enemy: new Castle(this, 'enemy') };
-    this.hands = { player: new Hand(DEFAULT_DECK), enemy: new Hand(DEFAULT_DECK) };
-    this.ai = new Ai(this, this.hands.enemy);
+    this.hands = { player: new Hand(player.units), enemy: new Hand(enemy.units) };
+    const slots = (l: Loadout) =>
+      l.spells.map((id) => {
+        const def = spellById(id)!;
+        return { def, readyAt: def.initialCooldown, total: def.initialCooldown };
+      });
+    this.spells = { player: slots(player), enemy: slots(enemy) };
+    this.ai = new Ai(this, this.hands.enemy, this.settings.difficulty);
     this.createHud();
     this.setupInput();
   }
@@ -72,33 +107,104 @@ export class BattleScene extends Phaser.Scene {
   update(_time: number, deltaMs: number) {
     if (this.over) return;
     const dt = Math.min(deltaMs / 1000, 0.05);
+    this.now += dt;
 
-    this.timeLeft -= dt;
-    const rate = MANA_PER_SEC * (this.timeLeft <= DOUBLE_MANA_AT ? 2 : 1);
+    const rate = MANA_PER_SEC * (this.now >= MATCH_TIME - DOUBLE_MANA_AT ? 2 : 1);
     this.hands.player.update(dt, rate);
     this.hands.enemy.update(dt, rate);
     this.ai.update(dt);
 
-    for (const u of this.units) if (u.alive) this.updateUnit(u, dt);
+    for (const u of [...this.units]) if (u.alive) this.updateUnit(u, dt);
     this.updateCastle(this.castles.player, dt);
     this.updateCastle(this.castles.enemy, dt);
     this.updateProjectiles(dt);
+    this.updateEffects(dt);
     this.removeDead();
+    this.overtimeDrain(dt);
 
+    for (const u of this.units) u.redraw(this.now);
     this.refreshHud();
     this.checkEnd();
   }
 
-  // ---------------------------------------------------------------- jogadas
+  // ================================================================ API (BattleApi)
 
-  /** Usa a carta `index` da mão de `team`. Para tropas, só o y (trilha) importa. */
-  playCard(team: Team, index: number, x: number, y: number): boolean {
-    const hand = this.hands[team];
-    if (this.over || !hand.canPlay(index)) return false;
-    const card = hand.play(index);
-    if (card.kind === 'unit') this.spawnUnits(team, card, this.laneAt(y));
-    else this.castSpell(team, card, Phaser.Math.Clamp(x, ARENA_LEFT, ARENA_RIGHT), Phaser.Math.Clamp(y, ARENA_TOP, ARENA_BOTTOM));
-    return true;
+  spawnUnit(team: Team, stats: UnitStats, lane: number, x: number, opts: SpawnOptions = {}): Unit {
+    const u = new Unit(this, team, stats, x, LANES_Y[lane], lane, !!opts.summoned);
+    if (stats.lifetime) u.expiresAt = this.now + stats.lifetime;
+    if (opts.duration) u.expiresAt = this.now + opts.duration;
+    if (opts.onExpire) u.ability.onExpire = opts.onExpire;
+    this.units.push(u);
+    ABILITIES[stats.id]?.onSpawn?.(u, this);
+    return u;
+  }
+
+  dealDamage(target: Unit | Castle, amount: number, source: Unit | null = null): number {
+    if (!target.alive || amount <= 0) return 0;
+    if (target instanceof Castle) {
+      target.takeDamage(amount);
+      return amount;
+    }
+    let dmg = amount * target.damageTakenMult * auraDamageMult(target, this);
+    if (target.has('freeze', this.now)) dmg *= 1 + target.statusValue('vulnerable', this.now) / 100;
+    if (target.shield && target.shield.until > this.now) {
+      const absorbed = Math.min(target.shield.amount, dmg);
+      target.shield.amount -= absorbed;
+      dmg -= absorbed;
+      if (target.shield.amount <= 0) {
+        const { onBreak } = target.shield;
+        target.shield = null;
+        onBreak?.(target);
+      }
+    }
+    if (source && source.alive && target.has('chillArmor', this.now)) {
+      this.applyStatus(source, 'slow', 2, target.statusValue('chillArmor', this.now));
+    }
+    if (dmg > 0) target.loseHp(dmg);
+    if (!target.alive && source) ABILITIES[source.stats.id]?.onKill?.(source, target, this);
+    return dmg;
+  }
+
+  heal(target: Unit, amount: number) {
+    if (!target.alive) return;
+    target.gainHp(amount * (target.has('healReduction', this.now) ? 0.5 : 1));
+  }
+
+  addShield(target: Unit, amount: number, duration: number, onBreak?: (u: Unit) => void) {
+    if (!target.alive) return;
+    const value = amount * (target.has('healReduction', this.now) ? 0.5 : 1);
+    const cur = target.shield && target.shield.until > this.now ? target.shield.amount : 0;
+    target.shield = { amount: Math.max(cur, value), until: this.now + duration, onBreak };
+  }
+
+  applyStatus(target: Unit, kind: StatusKind, duration: number, value = 0) {
+    if (target.alive) target.setStatus(kind, this.now, duration, value);
+  }
+
+  knockback(target: Unit, px: number) {
+    if (!target.alive || target.isBuilding || target.has('ccImmune', this.now) || target.has('steadfast', this.now)) return;
+    const ownFront = this.castles[target.team].front;
+    target.x -= target.dir * px;
+    target.x = target.dir > 0 ? Math.max(target.x, ownFront + target.radius) : Math.min(target.x, ownFront - target.radius);
+  }
+
+  enemiesInRadius(team: Team, x: number, y: number, r: number, includeAir = true): Unit[] {
+    return this.units.filter(
+      (u) => u.alive && u.team !== team && (includeAir || !u.isFlying) && Math.hypot(u.x - x, u.y - y) <= r + u.radius,
+    );
+  }
+
+  alliesInRadius(team: Team, x: number, y: number, r: number): Unit[] {
+    return this.units.filter((u) => u.alive && u.team === team && Math.hypot(u.x - x, u.y - y) <= r + u.radius);
+  }
+
+  unitsInLane(team: Team, lane: number): Unit[] {
+    return this.units.filter((u) => u.alive && u.team === team && u.lane === lane);
+  }
+
+  mostAdvanced(team: Team, lane: number): Unit | undefined {
+    const list = this.unitsInLane(team, lane);
+    return team === 'player' ? list.sort((a, b) => b.x - a.x)[0] : list.sort((a, b) => a.x - b.x)[0];
   }
 
   laneAt(y: number): number {
@@ -109,64 +215,129 @@ export class BattleScene extends Phaser.Scene {
     return best;
   }
 
-  private spawnUnits(team: Team, card: UnitCard, lane: number) {
-    const castle = this.castles[team];
+  addEffect(effect: ArenaEffect) {
+    this.effects.push(effect);
+  }
+
+  pulse(x: number, y: number, r: number, color: number, alpha = 0.5) {
+    const c = this.add.circle(x, y, r, color, alpha).setDepth(30).setScale(0.3);
+    this.tweens.add({ targets: c, scale: 1, alpha: 0, duration: 450, onComplete: () => c.destroy() });
+  }
+
+  floatText(x: number, y: number, text: string, color = '#ffffff') {
+    const t = this.add
+      .text(x, y, text, { fontSize: '22px', fontStyle: 'bold', color, stroke: '#000000', strokeThickness: 4 })
+      .setOrigin(0.5)
+      .setDepth(80);
+    this.tweens.add({ targets: t, y: y - 40, alpha: 0, duration: 900, onComplete: () => t.destroy() });
+  }
+
+  // ================================================================ jogadas
+
+  /** Faixa x onde `team` pode invocar na trilha: do próprio castelo até o meio ou a tropa inimiga mais avançada. */
+  spawnZone(team: Team, lane: number): [number, number] {
+    const foe = this.mostAdvanced(other(team), lane);
+    if (team === 'player') {
+      const from = ARENA_LEFT + 20;
+      const limit = Math.min(MID_X, foe ? foe.x - foe.radius - SPAWN_MARGIN : MID_X);
+      return [from, Math.max(from, limit)];
+    }
+    const from = ARENA_RIGHT - 20;
+    const limit = Math.max(MID_X, foe ? foe.x + foe.radius + SPAWN_MARGIN : MID_X);
+    return [Math.min(from, limit), from];
+  }
+
+  /** Usa a carta `index` da mão de `team` na trilha mais próxima de `y`, no x mais próximo permitido. */
+  playCard(team: Team, index: number, x: number, y: number): boolean {
+    const hand = this.hands[team];
+    if (this.over || !hand.canPlay(index)) return false;
+    const card = hand.play(index);
+    const lane = this.laneAt(y);
+    const [minX, maxX] = this.spawnZone(team, lane);
+    this.spawnCard(team, card, lane, Phaser.Math.Clamp(x, minX, maxX));
+    return true;
+  }
+
+  private spawnCard(team: Team, card: UnitDef, lane: number, x: number) {
     const dir = team === 'player' ? 1 : -1;
     for (let i = 0; i < card.count; i++) {
-      const spread = card.count > 1 ? (i - (card.count - 1) / 2) * 30 : 0;
-      const x = castle.front + dir * (card.unit.radius + 6 + (i % 2) * 14);
-      this.units.push(new Unit(this, team, card.unit, x, LANES_Y[lane] + spread, lane));
+      const u = this.spawnUnit(team, card, lane, x - dir * (i % 2) * 14);
+      u.y += card.count > 1 ? (i - (card.count - 1) / 2) * 24 : 0;
     }
   }
 
-  private castSpell(team: Team, card: SpellCard, x: number, y: number) {
-    const color = card.freeze ? 0x93c5fd : 0xf97316;
-    const blast = this.add.circle(x, y, card.radius, color, 0.5).setDepth(30).setScale(0.3);
-    const icon = this.add.text(x, y, card.icon, { fontSize: '48px' }).setOrigin(0.5).setDepth(31);
-    this.tweens.add({ targets: blast, scale: 1, alpha: 0, duration: 450, onComplete: () => blast.destroy() });
-    this.tweens.add({ targets: icon, alpha: 0, y: y - 30, duration: 600, onComplete: () => icon.destroy() });
-
-    for (const u of this.units) {
-      if (!u.alive || u.team === team) continue;
-      if (Phaser.Math.Distance.Between(x, y, u.x, u.y) > card.radius + u.radius) continue;
-      u.takeDamage(card.damage);
-      if (card.freeze) u.frozen = card.freeze;
-    }
-    const castle = this.castles[other(team)];
-    if (Math.abs(x - castle.front) <= card.radius) castle.takeDamage(card.damage * card.castleDamagePct);
+  spellRemaining(team: Team, index: number): number {
+    return Math.max(0, this.spells[team][index].readyAt - this.now);
   }
 
-  // ---------------------------------------------------------------- simulação
+  /** Lança a magia `index` de `team` no ponto (x, y). Retorna false se não estiver pronta ou sem alvo válido. */
+  castSpellAt(team: Team, index: number, x: number, y: number): boolean {
+    const slot = this.spells[team][index];
+    if (this.over || !slot || this.spellRemaining(team, index) > 0) return false;
+    const target = {
+      x: Phaser.Math.Clamp(x, ARENA_LEFT, ARENA_RIGHT),
+      y: Phaser.Math.Clamp(y, ARENA_TOP, ARENA_BOTTOM),
+      lane: this.laneAt(y),
+      unit: slot.def.target === 'aliado' ? pickAlly(this, team, x, y) : undefined,
+    };
+    if (slot.def.target === 'aliado' && !target.unit) return false;
+    castSpell(this, team, slot.def, this.loadouts[team].spellLevel, target);
+    slot.readyAt = this.now + slot.def.cooldown;
+    slot.total = slot.def.cooldown;
+    if (team === 'enemy') this.floatText(ARENA_RIGHT - 60, ARENA_TOP + 20, `${slot.def.icon} ${slot.def.name}`, '#fca5a5');
+    return true;
+  }
+
+  // ================================================================ simulação
 
   private updateUnit(u: Unit, dt: number) {
-    if (u.frozen > 0) {
-      u.frozen -= dt;
-      u.setFrozenLook(u.frozen > 0);
+    u.expireBuffs(this.now);
+    if (u.shield && u.shield.until <= this.now) u.shield = null;
+
+    if (u.expiresAt !== undefined && this.now >= u.expiresAt && !u.isBuilding) {
+      (u.ability.onExpire as ((x: Unit) => void) | undefined)?.(u);
+      u.ability.expired = true;
+      u.alive = false;
       return;
     }
+    if (u.isBuilding && u.stats.lifetime) {
+      u.hp -= (u.maxHp / u.stats.lifetime) * dt;
+      if (u.hp <= 0) {
+        u.ability.expired = true;
+        u.alive = false;
+        return;
+      }
+    }
+
+    if (!u.canAct(this.now)) return;
+    ABILITIES[u.stats.id]?.onTick?.(u, this, dt);
+    if (!u.alive) return;
+
     u.cooldown -= dt;
     const target = this.findTarget(u);
     if (target) {
       if (u.cooldown <= 0) {
-        u.cooldown = u.stats.attackInterval;
+        u.cooldown = u.attackInterval(this.now);
         this.attack(u, target);
       }
       return;
     }
-    u.x += u.dir * u.stats.speed * dt;
+    if (!u.canMove(this.now)) return;
+    u.x += u.dir * u.moveSpeed(this.now) * dt;
     const enemyFront = this.castles[other(u.team)].front;
     u.x = u.dir > 0 ? Math.min(u.x, enemyFront - u.radius) : Math.max(u.x, enemyFront + u.radius);
   }
 
-  /** Inimigo mais próximo à frente na mesma trilha; senão o castelo, se estiver no alcance. */
-  private findTarget(u: Unit): Damageable | null {
+  /** Provocador ao alcance; senão o inimigo mais próximo à frente na trilha; senão o castelo. */
+  private findTarget(u: Unit): Unit | Castle | null {
     let best: Unit | null = null;
     let bestDist = Infinity;
     for (const e of this.units) {
       if (!e.alive || e.team === u.team || e.lane !== u.lane || !u.canHit(e)) continue;
+      const dist = Math.abs(e.x - u.x) - e.radius - u.radius;
+      if (e.has('taunt', this.now) && dist <= u.stats.range + 80) return e;
       const ahead = (e.x - u.x) * u.dir;
       if (ahead < -(e.radius + u.radius)) continue;
-      const dist = Math.abs(e.x - u.x) - e.radius - u.radius;
       if (dist <= u.stats.range && dist < bestDist) {
         best = e;
         bestDist = dist;
@@ -177,13 +348,35 @@ export class BattleScene extends Phaser.Scene {
     return Math.abs(castle.front - u.x) - u.radius <= u.stats.range ? castle : null;
   }
 
-  private attack(u: Unit, target: Damageable) {
-    const from = u.aimPoint();
+  private attack(u: Unit, target: Unit | Castle) {
+    const hooks = ABILITIES[u.stats.id];
+    if (hooks?.onAttack?.(u, target, this)) return;
+    let damage = u.stats.damage * u.damageMult(this.now);
+    if (hooks?.modifyDamage) damage = hooks.modifyDamage(u, target, damage, this);
+    const splash = u.stats.splash ?? 0;
+    const hitsAir = !!u.stats.targetsAir;
     if (u.stats.range >= 60) {
-      this.fire(u.team, from, target, u.stats.damage, u.stats.splash ?? 0, !!u.stats.targetsAir, 0xfde68a);
+      const from = u.aimPoint();
+      const obj = this.add.circle(from.x, from.y, splash ? 7 : 5, u.team === 'player' ? 0xfde68a : 0xfecaca).setDepth(25);
+      this.projectiles.push({ obj, target, aim: target.aimPoint(from.y), team: u.team, damage, splash, hitsAir, source: u });
     } else {
       u.lunge();
-      this.hit(u.team, target, target.aimPoint(u.y), u.stats.damage, u.stats.splash ?? 0, !!u.stats.targetsAir);
+      this.hit(u.team, target, target.aimPoint(u.y), damage, splash, hitsAir, u);
+    }
+  }
+
+  private hit(team: Team, target: Unit | Castle, at: { x: number; y: number }, damage: number, splash: number, hitsAir: boolean, source: Unit | null) {
+    const onHit = (victim: Unit | Castle, dealt: number) => {
+      if (!source) return;
+      ABILITIES[source.stats.id]?.onHit?.(source, victim, dealt, this);
+      if (victim instanceof Unit && source.has('slowingAttacks', this.now)) this.applyStatus(victim, 'slow', 2, 20);
+    };
+    if (target.alive) onHit(target, this.dealDamage(target, damage, source));
+    if (!splash) return;
+    const ring = this.add.circle(at.x, at.y, splash, 0xfde68a, 0.35).setDepth(26);
+    this.tweens.add({ targets: ring, alpha: 0, duration: 250, onComplete: () => ring.destroy() });
+    for (const u of this.enemiesInRadius(team, at.x, at.y, splash, hitsAir)) {
+      if (u !== target) onHit(u, this.dealDamage(u, damage, source));
     }
   }
 
@@ -202,13 +395,8 @@ export class BattleScene extends Phaser.Scene {
     }
     if (!best) return;
     castle.cooldown = CASTLE_ATTACK_INTERVAL;
-    const from = { x: castle.front, y: best.y };
-    this.fire(castle.team, from, best, CASTLE_DAMAGE, 0, true, castle.team === 'player' ? 0x93c5fd : 0xfca5a5);
-  }
-
-  private fire(team: Team, from: { x: number; y: number }, target: Damageable, damage: number, splash: number, hitsAir: boolean, color: number) {
-    const obj = this.add.circle(from.x, from.y, splash ? 7 : 5, color).setDepth(25);
-    this.projectiles.push({ obj, target, aim: target.aimPoint(from.y), team, damage, splash, hitsAir });
+    const obj = this.add.circle(castle.front, best.y, 5, castle.team === 'player' ? 0x93c5fd : 0xfca5a5).setDepth(25);
+    this.projectiles.push({ obj, target: best, aim: best.aimPoint(), team: castle.team, damage: CASTLE_DAMAGE, splash: 0, hitsAir: true, source: null });
   }
 
   private updateProjectiles(dt: number) {
@@ -219,7 +407,7 @@ export class BattleScene extends Phaser.Scene {
       const dist = Math.hypot(dx, dy);
       const step = PROJECTILE_SPEED * dt;
       if (dist <= step) {
-        this.hit(p.team, p.target, p.aim, p.damage, p.splash, p.hitsAir);
+        this.hit(p.team, p.target, p.aim, p.damage, p.splash, p.hitsAir, p.source);
         p.obj.destroy();
       } else {
         p.obj.x += (dx / dist) * step;
@@ -229,43 +417,64 @@ export class BattleScene extends Phaser.Scene {
     this.projectiles = this.projectiles.filter((p) => p.obj.active);
   }
 
-  private hit(team: Team, target: Damageable, at: { x: number; y: number }, damage: number, splash: number, hitsAir: boolean) {
-    if (target.alive) target.takeDamage(damage);
-    if (!splash) return;
-    const ring = this.add.circle(at.x, at.y, splash, 0xfde68a, 0.35).setDepth(26);
-    this.tweens.add({ targets: ring, alpha: 0, duration: 250, onComplete: () => ring.destroy() });
-    for (const u of this.units) {
-      if (u === target || !u.alive || u.team === team || (u.flying && !hitsAir)) continue;
-      if (Phaser.Math.Distance.Between(at.x, at.y, u.x, u.y) <= splash + u.radius) u.takeDamage(damage);
-    }
+  /** Efeitos podem criar outros efeitos durante o update; esses entram na lista nova. */
+  private updateEffects(dt: number) {
+    const current = this.effects;
+    this.effects = [];
+    const kept = current.filter((e) => {
+      const keep = e.update(dt);
+      if (!keep) e.destroy();
+      return keep;
+    });
+    this.effects = [...kept, ...this.effects];
   }
 
   private removeDead() {
-    for (const u of this.units) {
-      if (u.alive) continue;
+    const dead = this.units.filter((u) => !u.alive);
+    if (!dead.length) return;
+    this.units = this.units.filter((u) => u.alive);
+    for (const u of dead) {
+      if (!u.ability.expired) ABILITIES[u.stats.id]?.onDeath?.(u, this);
       const puff = this.add.circle(u.x, u.y, u.radius, 0xffffff, 0.6).setDepth(15);
       this.tweens.add({ targets: puff, scale: 1.8, alpha: 0, duration: 250, onComplete: () => puff.destroy() });
       u.destroy();
     }
-    this.units = this.units.filter((u) => u.alive);
+  }
+
+  /** Na prorrogação, os castelos perdem 0,5% da vida máx./s, +0,5 p.p. a cada 10s. */
+  private overtimeDrain(dt: number) {
+    if (this.now < MATCH_TIME) return;
+    if (!this.overtimeAnnounced) {
+      this.overtimeAnnounced = true;
+      this.floatText(W / 2, H / 2 - 120, 'PRORROGAÇÃO!', '#f87171');
+    }
+    const steps = Math.floor((this.now - MATCH_TIME) / 10);
+    const pct = BATTLE_RULES.overtimeDrainPctPerSec + BATTLE_RULES.overtimeDrainRampPct * steps;
+    for (const c of [this.castles.player, this.castles.enemy]) c.takeDamage((c.maxHp * pct * dt) / 100, false);
   }
 
   private checkEnd() {
     const { player, enemy } = this.castles;
     let result: BattleResult | null = null;
-    if (!enemy.alive) result = 'win';
+    if (!enemy.alive && !player.alive) result = 'draw';
+    else if (!enemy.alive) result = 'win';
     else if (!player.alive) result = 'lose';
-    else if (this.timeLeft <= 0) {
-      result = player.hp > enemy.hp ? 'win' : player.hp < enemy.hp ? 'lose' : 'draw';
+    else if (this.now >= MATCH_TIME + OVERTIME) {
+      result = player.ratio > enemy.ratio ? 'win' : player.ratio < enemy.ratio ? 'lose' : 'draw';
     }
     if (!result) return;
     this.over = true;
     this.time.delayedCall(1200, () =>
-      this.scene.start('Result', { result, playerHp: Math.ceil(player.hp), enemyHp: Math.ceil(enemy.hp) }),
+      this.scene.start('Result', {
+        result,
+        playerHp: Math.ceil(player.hp),
+        enemyHp: Math.ceil(enemy.hp),
+        settings: this.settings,
+      }),
     );
   }
 
-  // ---------------------------------------------------------------- visual / HUD
+  // ================================================================ visual / HUD
 
   private drawArena() {
     this.add.rectangle(W / 2, H / 2, W, H, 0x0b1020);
@@ -280,17 +489,17 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private createHud() {
+    const pGod = godById(this.loadouts.player.god)!;
+    const eGod = godById(this.loadouts.enemy.god)!;
     this.add.rectangle(W / 2, HUD_HEIGHT / 2, W, HUD_HEIGHT, COLORS.ui).setDepth(60);
-    this.add.text(20, HUD_HEIGHT / 2, 'VOCÊ', { fontSize: '18px', fontStyle: 'bold', color: '#60a5fa' })
-      .setOrigin(0, 0.5).setDepth(61);
-    this.add.text(W - 20, HUD_HEIGHT / 2, 'IA', { fontSize: '18px', fontStyle: 'bold', color: '#f87171' })
-      .setOrigin(1, 0.5).setDepth(61);
+    this.add.text(14, HUD_HEIGHT / 2, `${pGod.icon}`, { fontSize: '30px' }).setOrigin(0, 0.5).setDepth(61);
+    this.add.text(W - 14, HUD_HEIGHT / 2, `${eGod.icon}`, { fontSize: '30px' }).setOrigin(1, 0.5).setDepth(61);
     this.timerText = this.add
       .text(W / 2, HUD_HEIGHT / 2 - 6, '', { fontSize: '30px', fontStyle: 'bold', color: '#ffffff' })
       .setOrigin(0.5).setDepth(61);
-    this.doubleText = this.add
-      .text(W / 2, HUD_HEIGHT - 8, 'MANA x2', { fontSize: '14px', fontStyle: 'bold', color: '#c084fc' })
-      .setOrigin(0.5).setDepth(61).setVisible(false);
+    this.phaseText = this.add
+      .text(W / 2, HUD_HEIGHT - 8, '', { fontSize: '14px', fontStyle: 'bold', color: '#c084fc' })
+      .setOrigin(0.5).setDepth(61);
 
     this.add.rectangle(W / 2, (CARD_AREA_Y + H) / 2, W, H - CARD_AREA_Y, COLORS.ui).setDepth(45);
     this.manaBar = this.add.graphics().setDepth(50);
@@ -298,15 +507,23 @@ export class BattleScene extends Phaser.Scene {
       .text(W - 300, CARD_AREA_Y + 24, '', { fontSize: '22px', fontStyle: 'bold', color: '#e9d5ff' })
       .setOrigin(0, 0.5).setDepth(51);
 
+    // Magias à esquerda.
+    this.spells.player.forEach((slot, i) => {
+      const b = new SpellButton(this, 62 + i * 112, CARD_AREA_Y + 72, slot.def, hex(pGod.color));
+      b.setInteractive({ useHandCursor: true });
+      b.on('pointerdown', () => this.select({ kind: 'spell', index: i }));
+      this.spellButtons.push(b);
+    });
+
     const cardY = CARD_AREA_Y + 100;
-    const firstX = W / 2 - 1.5 * (CARD_W + 14);
+    const firstX = W / 2 - 1.5 * (CARD_W + 14) + 60;
     for (let i = 0; i < HAND_SIZE; i++) {
       const view = new CardView(this, firstX + i * (CARD_W + 14), cardY);
       view.setInteractive({ useHandCursor: true });
-      view.on('pointerdown', () => this.selectCard(i));
+      view.on('pointerdown', () => this.select({ kind: 'card', index: i }));
       this.cardViews.push(view);
     }
-    const nextX = firstX - CARD_W - 40;
+    const nextX = firstX - CARD_W - 20;
     this.nextView = new CardView(this, nextX, cardY + 12, true);
     this.add.text(nextX, cardY - 52, 'Próxima', { fontSize: '16px', color: '#9ca3af' }).setOrigin(0.5).setDepth(51);
 
@@ -316,12 +533,15 @@ export class BattleScene extends Phaser.Scene {
 
   private refreshHud() {
     const hand = this.hands.player;
-    const t = Math.max(0, Math.ceil(this.timeLeft));
-    this.timerText.setText(`${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`);
-    this.doubleText.setVisible(this.timeLeft <= DOUBLE_MANA_AT);
+    const overtime = this.now >= MATCH_TIME;
+    const t = Math.max(0, Math.ceil(overtime ? MATCH_TIME + OVERTIME - this.now : MATCH_TIME - this.now));
+    this.timerText.setText(`${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`).setColor(overtime ? '#f87171' : '#ffffff');
+    this.phaseText
+      .setText(overtime ? 'PRORROGAÇÃO' : this.now >= MATCH_TIME - DOUBLE_MANA_AT ? 'MANA x2' : '')
+      .setColor(overtime ? '#f87171' : '#c084fc');
 
-    const x0 = 300;
-    const w = W - 620;
+    const x0 = 360;
+    const w = W - 700;
     const y = CARD_AREA_Y + 14;
     this.manaBar.clear();
     this.manaBar.fillStyle(0x000000, 0.6).fillRoundedRect(x0, y, w, 20, 8);
@@ -334,34 +554,41 @@ export class BattleScene extends Phaser.Scene {
       const view = this.cardViews[i];
       view.setCard(card);
       view.setPlayable(hand.canPlay(i));
-      view.setSelected(this.selected === i);
+      view.setSelected(this.selection?.kind === 'card' && this.selection.index === i);
     });
     this.nextView.setCard(hand.next);
+    this.spellButtons.forEach((b, i) =>
+      b.refresh(this.spellRemaining('player', i), this.spells.player[i].total, this.selection?.kind === 'spell' && this.selection.index === i),
+    );
   }
 
-  // ---------------------------------------------------------------- input
+  // ================================================================ input
 
   private setupInput() {
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
-      if (this.dragging && p.isDown) this.ghost.setPosition(p.x, p.y).setVisible(p.y < CARD_AREA_Y);
+      if (this.dragging && p.isDown) this.ghost.setPosition(p.x, p.y).setVisible(this.inArena(p));
       this.drawPreview(p);
     });
     this.input.on('pointerup', (p: Phaser.Input.Pointer) => {
       const wasDragging = this.dragging;
       this.dragging = false;
       this.ghost.setVisible(false);
-      if (wasDragging && this.inArena(p)) this.tryPlay(p);
+      if (wasDragging && this.inArena(p)) this.tryUse(p);
       this.drawPreview(p);
     });
     this.input.on('pointerdown', (p: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
-      if (!over.length && this.selected !== null && this.inArena(p)) this.tryPlay(p);
+      if (!over.length && this.selection && this.inArena(p)) this.tryUse(p);
     });
   }
 
-  private selectCard(i: number) {
-    this.selected = i;
+  private select(sel: NonNullable<Selection>) {
+    if (sel.kind === 'spell' && this.spellRemaining('player', sel.index) > 0) {
+      this.floatText(this.spellButtons[sel.index].x, CARD_AREA_Y - 10, 'Recarregando', '#e9d5ff');
+      return;
+    }
+    this.selection = sel;
     this.dragging = true;
-    this.ghost.setText(this.hands.player.hand[i].icon);
+    this.ghost.setText(sel.kind === 'card' ? this.hands.player.hand[sel.index].icon : this.spells.player[sel.index].def.icon);
     this.refreshHud();
   }
 
@@ -369,34 +596,50 @@ export class BattleScene extends Phaser.Scene {
     return p.y > HUD_HEIGHT && p.y < CARD_AREA_Y;
   }
 
-  private tryPlay(p: Phaser.Input.Pointer) {
-    if (this.selected === null) return;
-    // Feitiços podem ir em qualquer ponto; tropas sempre saem do castelo na trilha escolhida.
-    if (this.playCard('player', this.selected, p.x, p.y)) {
-      this.selected = null;
-      this.refreshHud();
+  private tryUse(p: Phaser.Input.Pointer) {
+    const sel = this.selection;
+    if (!sel) return;
+    if (sel.kind === 'card') {
+      if (this.playCard('player', sel.index, p.x, p.y)) this.selection = null;
+      else this.floatText(W / 2, CARD_AREA_Y - 30, 'Mana insuficiente', '#e9d5ff');
     } else {
-      this.flashNoMana();
+      const def = this.spells.player[sel.index].def;
+      if (this.castSpellAt('player', sel.index, p.x, p.y)) this.selection = null;
+      else if (def.target === 'aliado') this.floatText(p.x, p.y - 30, 'Escolha uma tropa sua', '#fde68a');
     }
-  }
-
-  private flashNoMana() {
-    const txt = this.add
-      .text(W / 2, CARD_AREA_Y - 30, 'Mana insuficiente', { fontSize: '26px', fontStyle: 'bold', color: '#e9d5ff' })
-      .setOrigin(0.5).setDepth(80);
-    this.tweens.add({ targets: txt, alpha: 0, y: '-=30', duration: 700, onComplete: () => txt.destroy() });
+    this.refreshHud();
   }
 
   private drawPreview(p: Phaser.Input.Pointer) {
-    this.preview.clear();
-    if (this.selected === null || !this.inArena(p)) return;
-    const card: Card = this.hands.player.hand[this.selected];
-    if (card.kind === 'spell') {
-      this.preview.lineStyle(3, 0xffffff, 0.8).strokeCircle(p.x, p.y, card.radius);
-      this.preview.fillStyle(0xffffff, 0.12).fillCircle(p.x, p.y, card.radius);
-    } else {
-      const y = LANES_Y[this.laneAt(p.y)];
-      this.preview.fillStyle(0xffffff, 0.15).fillRect(ARENA_LEFT, y - LANE_HEIGHT / 2 + 25, MID_X - ARENA_LEFT, LANE_HEIGHT - 50);
+    const g = this.preview;
+    g.clear();
+    if (!this.selection || !this.inArena(p)) return;
+    const lane = this.laneAt(p.y);
+    const laneTop = LANES_Y[lane] - LANE_HEIGHT / 2 + 25;
+    if (this.selection.kind === 'card') {
+      const [minX, maxX] = this.spawnZone('player', lane);
+      g.fillStyle(0xffffff, 0.15).fillRect(minX, laneTop, maxX - minX, LANE_HEIGHT - 50);
+      const x = Phaser.Math.Clamp(p.x, minX, maxX);
+      g.lineStyle(3, 0xffffff, 0.9).strokeCircle(x, LANES_Y[lane], 22);
+      return;
+    }
+    const def = this.spells.player[this.selection.index].def;
+    switch (def.target) {
+      case 'ponto':
+        g.lineStyle(3, 0xffffff, 0.8).strokeCircle(p.x, p.y, def.radius ?? 80);
+        g.fillStyle(0xffffff, 0.12).fillCircle(p.x, p.y, def.radius ?? 80);
+        break;
+      case 'trilha':
+        g.fillStyle(0xffffff, 0.15).fillRect(ARENA_LEFT, laneTop, ARENA_RIGHT - ARENA_LEFT, LANE_HEIGHT - 50);
+        break;
+      case 'aliado': {
+        const ally = pickAlly(this, 'player', p.x, p.y);
+        if (ally) g.lineStyle(4, COLORS.gold, 1).strokeCircle(ally.x, ally.y, ally.radius + 10);
+        else g.lineStyle(3, 0xef4444, 0.8).strokeCircle(p.x, p.y, 20);
+        break;
+      }
+      default:
+        g.fillStyle(0xffffff, 0.08).fillRect(ARENA_LEFT, ARENA_TOP, ARENA_RIGHT - ARENA_LEFT, ARENA_BOTTOM - ARENA_TOP);
     }
   }
 }

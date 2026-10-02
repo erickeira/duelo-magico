@@ -1,15 +1,14 @@
 import Phaser from 'phaser';
-import { ARENA_BOTTOM, ARENA_LEFT, ARENA_RIGHT, ARENA_TOP, CASTLE_HP, COLORS, HUD_HEIGHT, W } from '../config';
-import { Team } from '../data/cards';
+import { ARENA_BOTTOM, ARENA_LEFT, ARENA_RIGHT, ARENA_TOP, CASTLE_HP, COLORS, HUD_HEIGHT, W, type Team } from '../config';
 import { Damageable } from './Unit';
 
 const WIDTH = 150;
 const HP_BAR_W = 380;
 
 export class Castle implements Damageable {
-  hp = CASTLE_HP;
+  hp: number;
   alive = true;
-  readonly flying = false;
+  readonly isFlying = false;
   cooldown = 0;
   /** Linha x onde as tropas inimigas param para atacar. */
   readonly front: number;
@@ -19,7 +18,8 @@ export class Castle implements Damageable {
   private hpBar: Phaser.GameObjects.Graphics;
   private hpText: Phaser.GameObjects.Text;
 
-  constructor(private scene: Phaser.Scene, readonly team: Team) {
+  constructor(private scene: Phaser.Scene, readonly team: Team, readonly maxHp = CASTLE_HP) {
+    this.hp = maxHp;
     const isPlayer = team === 'player';
     this.front = isPlayer ? ARENA_LEFT : ARENA_RIGHT;
     const height = ARENA_BOTTOM - ARENA_TOP;
@@ -47,19 +47,25 @@ export class Castle implements Damageable {
   }
 
   get ratio(): number {
-    return Math.max(0, this.hp) / CASTLE_HP;
+    return Math.max(0, this.hp) / this.maxHp;
   }
 
   aimPoint(alongY: number) {
     return { x: this.front + (this.team === 'player' ? -12 : 12), y: alongY };
   }
 
-  takeDamage(amount: number) {
+  takeDamage(amount: number, shake = true) {
     if (!this.alive) return;
     this.hp = Math.max(0, this.hp - amount);
     if (this.hp <= 0) this.alive = false;
     this.draw();
-    this.scene.tweens.add({ targets: this.container, x: this.baseX + 4, duration: 40, yoyo: true });
+    if (shake) this.scene.tweens.add({ targets: this.container, x: this.baseX + 4, duration: 40, yoyo: true });
+  }
+
+  heal(amount: number) {
+    if (!this.alive) return;
+    this.hp = Math.min(this.maxHp, this.hp + amount);
+    this.draw();
   }
 
   private draw() {

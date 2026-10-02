@@ -24,11 +24,15 @@ Objetivo: a batalha do jogo final contra a IA, com o deck sugerido do deus escol
 - [x] Menu com escolha rápida de deus e dificuldade
 - [x] IA capaz de jogar dos dois lados, para simular IA × IA ([Arquitetura](/tecnico/arquitetura#simulacao))
 
-## v0.3: pré-partida e coleção
+## ✅ v0.3: pré-partida e coleção (feito)
 
-- [ ] Tela de pré-batalha: escolher deus, 2 magias e deck de 8; 5 decks salvos
-- [ ] Coleção com fichas de tropa
-- [ ] Salvamento local (localStorage, e depois Capacitor Preferences)
+- [x] Tela inicial (hub) com deck ativo, dificuldade e atalhos
+- [x] Montar deck: escolher deus, 2 magias e deck de 8; 5 decks salvos; avisos de montagem (`analyzeDeck`)
+- [x] Coleção com fichas de tropa
+- [x] Salvamento local (localStorage) com reparo de dados inválidos
+- [ ] Trocar localStorage por Capacitor Preferences quando virar app (v0.5)
+
+Na v0.3, todas as tropas, deuses e magias ficam liberados. Os desbloqueios por troféus e o nível do deus entram na v0.4.
 
 ## v0.4: progressão e economia
 

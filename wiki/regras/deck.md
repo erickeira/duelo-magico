@@ -14,12 +14,23 @@ Toda batalha começa com três escolhas: **deus**, **duas magias** e **deck de t
 - Cada deck salvo guarda **deus + 2 magias + 8 tropas**. Trocar de deck troca tudo de uma vez.
 - O botão **Batalhar** só fica ativo se o deck estiver completo.
 
+::: info No jogo hoje (v0.3)
+Tudo está liberado: qualquer deus, magia e tropa pode entrar no deck. Os desbloqueios por troféus e o nível do deus entram com a [progressão](/progressao) na v0.4.
+:::
+
 ## Fluxo de escolha
 
 1. **Deus:** carrossel com os deuses liberados, mostrando o nível de cada um.
 2. **Magias:** as 5 magias do deus, com as bloqueadas em cinza e o nível necessário. Você toca em 2.
-3. **Tropas:** a coleção aparece embaixo e os 8 espaços em cima. Toque numa tropa para colocar no deck ou trocar. Arrastar também funciona.
-4. **Resumo:** custo médio de mana, quantidade de tropas que acertam voadores, tanques e dano em área, com avisos do tipo "Seu deck não tem resposta para voadores".
+3. **Tropas:** a coleção aparece embaixo e os 8 espaços em cima. Toque numa tropa para colocar no deck ou trocar (arrastar fica para uma versão futura).
+4. **Resumo:** custo médio de mana, quantidade de tropas que acertam voadores, tanques e dano em área, com avisos calculados por `analyzeDeck` (`src/data/content/deck.ts`):
+   - faltam tropas ou magias;
+   - custo médio abaixo de 3 ou acima de 4,3;
+   - menos de 2 tropas que acertam voadores;
+   - nenhum tanque;
+   - nenhum dano em área, contando tropas e magias de dano em área.
+
+No jogo: toque numa tropa da coleção para colocá-la no primeiro espaço livre. Para trocar, toque primeiro na carta do deck e depois na tropa nova; tocar duas vezes na mesma carta do deck a remove. Ao trocar de deus, as magias passam a ser as sugeridas para ele e as tropas ficam. **Restaurar sugerido** volta o deck ao sugerido do deus. Tudo é salvo na hora.
 
 ## Deck inicial
 

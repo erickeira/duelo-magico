@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
 import { H, W } from './config';
 import { BattleScene } from './scenes/BattleScene';
-import { MenuScene } from './scenes/MenuScene';
+import { CollectionScene } from './scenes/CollectionScene';
+import { DeckScene } from './scenes/DeckScene';
+import { HomeScene } from './scenes/HomeScene';
 import { ResultScene } from './scenes/ResultScene';
 
 const game = new Phaser.Game({
@@ -15,7 +17,7 @@ const game = new Phaser.Game({
     height: H,
   },
   input: { activePointers: 2 },
-  scene: [MenuScene, BattleScene, ResultScene],
+  scene: [HomeScene, DeckScene, CollectionScene, BattleScene, ResultScene],
 });
 
 // Facilita depuração no console do navegador durante o desenvolvimento.

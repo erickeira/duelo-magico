@@ -1,4 +1,5 @@
 import { GODS, godById, type GodId } from '../data/content';
+import type { Deck } from '../save/save';
 
 /** O que um lado leva para a batalha: deus, 2 magias e 8 tropas. */
 export interface Loadout {
@@ -11,7 +12,7 @@ export interface Loadout {
 export type Difficulty = 'facil' | 'normal' | 'dificil';
 
 export interface BattleSettings {
-  god: GodId;
+  deck: Deck;
   difficulty: Difficulty;
 }
 
@@ -21,9 +22,14 @@ function spellLevelFromUrl(): number {
   return v >= 1 && v <= 5 ? Math.floor(v) : 1;
 }
 
-/** Até existir a tela de deck (v0.3), cada deus usa o primeiro deck sugerido. */
+export function loadoutFromDeck(deck: Deck): Loadout {
+  return { god: deck.god, spells: [deck.spells[0], deck.spells[1]], units: [...deck.units], spellLevel: spellLevelFromUrl() };
+}
+
+/** Deck da IA: um dos decks sugeridos do deus. */
 export function loadoutForGod(god: GodId): Loadout {
-  const deck = godById(god)!.suggestedDecks[0];
+  const decks = godById(god)!.suggestedDecks;
+  const deck = decks[Math.floor(Math.random() * decks.length)];
   return { god, spells: deck.spells, units: deck.units, spellLevel: spellLevelFromUrl() };
 }
 

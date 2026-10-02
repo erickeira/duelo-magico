@@ -11,7 +11,8 @@ import type { ArenaEffect, BattleApi, SpawnOptions } from '../battle/api';
 import { CARD_W, CardView } from '../battle/CardView';
 import { Castle } from '../battle/Castle';
 import { Hand } from '../battle/Hand';
-import { loadoutForGod, randomGod, type BattleSettings, type Loadout } from '../battle/Loadout';
+import { loadoutForGod, loadoutFromDeck, randomGod, type BattleSettings, type Loadout } from '../battle/Loadout';
+import { activeDeck, getSave } from '../save/save';
 import { SpellButton } from '../battle/SpellButton';
 import { castSpell, pickAlly } from '../battle/spells';
 import { Unit, type StatusKind, type UnitStats } from '../battle/Unit';
@@ -73,7 +74,7 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
   }
 
   init(data: Partial<BattleSettings>) {
-    this.settings = { god: data.god ?? 'ignar', difficulty: data.difficulty ?? 'normal' };
+    this.settings = { deck: data.deck ?? activeDeck(), difficulty: data.difficulty ?? getSave().difficulty };
     this.units = [];
     this.projectiles = [];
     this.effects = [];
@@ -87,7 +88,7 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
   }
 
   create() {
-    const player = loadoutForGod(this.settings.god);
+    const player = loadoutFromDeck(this.settings.deck);
     const enemy = { ...loadoutForGod(randomGod()), spellLevel: player.spellLevel };
     this.loadouts = { player, enemy };
     this.drawArena();

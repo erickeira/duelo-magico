@@ -15,6 +15,7 @@ src/data/content/
   progression.ts  # custos e curvas de nível
   economy.ts      # recursos, baús, recompensas, coleção inicial
   rules.ts        # regras da batalha (tempo, mana, deck, castelo)
+  deck.ts         # analyzeDeck(): custo médio, antiaéreos, tanques, área e avisos
   index.ts        # exporta tudo + validateContent()
 ```
 

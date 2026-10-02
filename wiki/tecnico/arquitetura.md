@@ -11,12 +11,22 @@
 ## Cenas
 
 ```
-MenuScene ──BATALHAR {deus, dificuldade}──▶ BattleScene ──fim──▶ ResultScene
-     ▲                                          ▲                    │
-     └──────────────MENU────────────────────────┴───JOGAR DE NOVO────┘
+             ┌──────────────┐
+   ┌────────▶│  HomeScene   │◀──────────────┐
+   │         └──┬───┬───┬───┘               │
+   │   Montar deck  │  Coleção              │ MENU
+   │      ▼         │     ▼                 │
+   │  DeckScene     │  CollectionScene      │
+   │      │ BATALHAR│                       │
+   │      ▼         ▼ BATALHAR {deck, dificuldade}
+   │      └───▶ BattleScene ──fim──▶ ResultScene ──JOGAR DE NOVO──▶ BattleScene
+   └─────────────────────────────────────────┘
 ```
 
-- `MenuScene`: escolha rápida de deus (usa o 1º deck sugerido dele) e de dificuldade. Será substituída pela tela de deck na v0.3.
+- `HomeScene`: deck ativo (setas trocam entre os 5), dificuldade e atalhos.
+- `DeckScene`: abas dos 5 decks, deus (setas), 5 magias (escolhe 2), 8 espaços, coleção filtrável e análise do deck. Cada mudança vai direto para o save.
+- `CollectionScene`: grade das 24 tropas com ficha detalhada.
+- `scenes/ui.ts`: `button`, `toast`, `panel` e `UnitTile`, os componentes reutilizados pelas telas.
 - `BattleScene.init()` zera todo o estado, porque o Phaser reaproveita a instância da cena entre partidas.
 
 ## Layout (px lógicos)
@@ -30,11 +40,29 @@ y 60–540   ┌─castelo─┐ ═══ trilha 0 (y=140) ═══ ┊ ══
 y 550–720  [magia][magia]   próxima · mana · mão com 4 cartas
 ```
 
+## Salvamento (`src/save/save.ts`)
+
+O estado fica em `localStorage`, na chave `duelo-magico:save`:
+
+```json
+{
+  "version": 1,
+  "activeDeck": 0,
+  "difficulty": "normal",
+  "decks": [{ "name": "Fornalha Inicial", "god": "ignar", "spells": ["cometa-rubro", "brado-guerra"], "units": ["cavaleiro", "..."] }]
+}
+```
+
+- `getSave()` carrega uma vez e passa por `sanitizeDeck`. Ele remove ids que não existem, magias de outro deus e tropas repetidas, e corrige limites. Com JSON quebrado ou `localStorage` bloqueado, o jogo usa os decks padrão.
+- `updateSave(fn)` altera e grava. Se a gravação falhar, o jogo segue sem salvar.
+- Os decks padrão são os sugeridos dos deuses (`defaultDecks`).
+- Ao mudar o formato, aumente `version` e escreva a migração em `load()`.
+
 ## Módulos da batalha (`src/battle/`)
 
 | Arquivo | Responsabilidade |
 |---|---|
-| `Loadout.ts` | O que cada lado leva: deus, 2 magias, 8 tropas e nível das magias. `loadoutForGod()` usa o deck sugerido do deus. |
+| `Loadout.ts` | O que cada lado leva: deus, 2 magias, 8 tropas e nível das magias. `loadoutFromDeck()` para o jogador; `loadoutForGod()` sorteia um deck sugerido para a IA. |
 | `Hand.ts` | Mana, mão de 4 cartas e fila (com `UnitDef`). |
 | `Unit.ts` | Uma tropa: atributos, vida, **escudo**, **status** com expiração, **buffs**, tempo de vida (construções e invocações) e desenho dos anéis de status. |
 | `Castle.ts` | Vida, cura, dano e barra no HUD. |
@@ -112,7 +140,7 @@ Com a simulação manual (cena pausada e `update` chamado em laço), uma partida
 
 ```js
 const { Ai } = await import('/src/battle/Ai.ts');
-game.scene.start('Battle', { god: 'ignar', difficulty: 'normal' });
+game.scene.start('Battle', { difficulty: 'normal' }); // sem deck = deck ativo do save
 // depois de a cena iniciar:
 const b = game.scene.getScene('Battle');
 b.sys.pause();

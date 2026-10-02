@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { GODS, UNITS } from '@content/index';
+import { GODS, UNITS, analyzeDeck } from '@content/index';
 import { ref } from './util';
 
 const props = defineProps<{ god: string }>();
@@ -21,5 +21,10 @@ const avgCost = (ids: string[]) =>
       <a v-for="id in d.spells" :key="id" :href="ref(id).href" class="dm-badge" :style="{ color: g.color, textDecoration: 'none' }">{{ ref(id).label }}</a>
     </div>
     <p><strong>Plano de jogo:</strong> {{ d.plan }}</p>
+    <p class="dm-muted" style="margin-bottom: 0">
+      Análise do jogo: acertam voadores {{ analyzeDeck(d.units, d.spells).antiAir }} · tanques {{ analyzeDeck(d.units, d.spells).tanks }} · dano em área {{ analyzeDeck(d.units, d.spells).area }}<template v-if="analyzeDeck(d.units, d.spells).areaSpells"> (+{{ analyzeDeck(d.units, d.spells).areaSpells }} magia)</template>
+      <template v-if="analyzeDeck(d.units, d.spells).warnings.length"> · ⚠️ {{ analyzeDeck(d.units, d.spells).warnings.join(' · ') }}</template>
+      <template v-else> · ✅ equilibrado</template>
+    </p>
   </div>
 </template>

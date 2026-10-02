@@ -6,6 +6,7 @@ export * from './gods';
 export * from './progression';
 export * from './economy';
 export * from './rules';
+export * from './deck';
 
 import { GODS } from './gods';
 import { SPELLS } from './spells';

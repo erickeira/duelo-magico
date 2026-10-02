@@ -2,6 +2,10 @@
 
 Todas as telas são **horizontais (1280×720 lógicos)** e pensadas para o polegar: botões principais embaixo e à direita, nada importante nos cantos de cima (por causa do notch).
 
+::: info Estado atual (v0.3)
+Já existem: **Início**, **Montar deck**, **Coleção**, **Batalha** e **Resultado**. Baús, recursos, nível de conta e a tela **Deuses e magias** (subir de nível) chegam com a progressão na v0.4; os desenhos abaixo já mostram onde vão ficar.
+:::
+
 ## Mapa de telas
 
 ```

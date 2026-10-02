@@ -32,6 +32,6 @@ export class ResultScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     button(this, W / 2, 440, 'JOGAR DE NOVO', COLORS.player, () => this.scene.start('Battle', { ...data.settings }));
-    button(this, W / 2, 560, 'MENU', 0x374151, () => this.scene.start('Menu', { ...data.settings }));
+    button(this, W / 2, 560, 'MENU', 0x374151, () => this.scene.start('Home'));
   }
 }

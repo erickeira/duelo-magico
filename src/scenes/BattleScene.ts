@@ -19,6 +19,7 @@ import { castSpell, pickAlly } from '../battle/spells';
 import { Unit, type StatusKind, type UnitStats } from '../battle/Unit';
 import { GROUND_KEY, arenaKey, coverImage, godFaceKey } from './PreloadScene';
 import { ArtIcon } from './ui';
+import { FONT_DISPLAY, THEME, gem, titleStyle } from './theme';
 
 interface Projectile {
   obj: Phaser.GameObjects.Arc;
@@ -525,20 +526,16 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
   private createHud() {
     const pGod = godById(this.loadouts.player.god)!;
     const eGod = godById(this.loadouts.enemy.god)!;
-    this.add.rectangle(W / 2, HUD_HEIGHT / 2, W, HUD_HEIGHT, COLORS.ui).setDepth(60);
+    this.drawHudFrame();
     new ArtIcon(this, 34, HUD_HEIGHT / 2, 46).set(godFaceKey(pGod.id), pGod.icon).setDepth(61);
     new ArtIcon(this, W - 34, HUD_HEIGHT / 2, 46).set(godFaceKey(eGod.id), eGod.icon).setDepth(61);
-    this.timerText = this.add
-      .text(W / 2, HUD_HEIGHT / 2 - 6, '', { fontSize: '30px', fontStyle: 'bold', color: '#ffffff' })
-      .setOrigin(0.5).setDepth(61);
+    this.timerText = this.add.text(W / 2, HUD_HEIGHT / 2 - 2, '', titleStyle(30, '#ffffff')).setOrigin(0.5).setDepth(62);
     this.phaseText = this.add
-      .text(W / 2, HUD_HEIGHT - 8, '', { fontSize: '14px', fontStyle: 'bold', color: '#c084fc' })
-      .setOrigin(0.5).setDepth(61);
-
-    this.add.rectangle(W / 2, (CARD_AREA_Y + H) / 2, W, H - CARD_AREA_Y, COLORS.ui).setDepth(45);
+      .text(W / 2, HUD_HEIGHT + 14, '', { ...titleStyle(15, '#d8b4fe'), strokeThickness: 4 })
+      .setOrigin(0.5).setDepth(62);
     this.manaBar = this.add.graphics().setDepth(50);
     this.manaText = this.add
-      .text(W - 300, CARD_AREA_Y + 24, '', { fontSize: '22px', fontStyle: 'bold', color: '#e9d5ff' })
+      .text(W - 300, CARD_AREA_Y + 24, '', titleStyle(24, '#f3e8ff'))
       .setOrigin(0, 0.5).setDepth(51);
 
     // Magias à esquerda.
@@ -559,10 +556,36 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
     }
     const nextX = firstX - CARD_W - 20;
     this.nextView = new CardView(this, nextX, cardY + 12, true);
-    this.add.text(nextX, cardY - 52, 'Próxima', { fontSize: '16px', color: '#9ca3af' }).setOrigin(0.5).setDepth(51);
+    this.add.text(nextX, cardY - 52, 'PRÓXIMA', { fontFamily: FONT_DISPLAY, fontSize: '15px', color: THEME.muted }).setOrigin(0.5).setDepth(51);
 
     this.ghost = this.add.text(0, 0, '', { fontSize: '56px' }).setOrigin(0.5).setDepth(70).setAlpha(0.8).setVisible(false);
     this.refreshHud();
+  }
+
+  /** Molduras do HUD: faixa de cima com o medalhão do tempo e a bandeja de cartas embaixo. */
+  private drawHudFrame() {
+    const g = this.add.graphics().setDepth(60);
+    // Faixa de cima.
+    g.fillGradientStyle(0x1a2140, 0x1a2140, 0x0c1024, 0x0c1024, 0.95).fillRect(0, 0, W, HUD_HEIGHT);
+    g.lineStyle(2, THEME.gold, 0.9).lineBetween(0, HUD_HEIGHT, W, HUD_HEIGHT);
+    g.lineStyle(1, THEME.goldDark, 1).lineBetween(0, HUD_HEIGHT + 3, W, HUD_HEIGHT + 3);
+    // Medalhão do tempo, pendurado na faixa.
+    g.fillStyle(0x000000, 0.45).fillRoundedRect(W / 2 - 74, 4, 148, HUD_HEIGHT + 4, 16);
+    g.fillGradientStyle(0x2b3566, 0x2b3566, 0x121733, 0x121733, 1).fillRoundedRect(W / 2 - 76, 0, 152, HUD_HEIGHT + 2, { tl: 0, tr: 0, bl: 18, br: 18 });
+    g.lineStyle(3, THEME.gold, 1).strokeRoundedRect(W / 2 - 76, -4, 152, HUD_HEIGHT + 6, { tl: 0, tr: 0, bl: 18, br: 18 });
+    gem(g, W / 2, HUD_HEIGHT + 2, 7);
+    // Anéis dourados em volta dos retratos dos deuses.
+    for (const x of [34, W - 34]) {
+      g.fillStyle(0x000000, 0.5).fillCircle(x, HUD_HEIGHT / 2 + 2, 27);
+      g.lineStyle(3, THEME.gold, 1).strokeCircle(x, HUD_HEIGHT / 2, 25);
+    }
+    // Bandeja das cartas.
+    const t = this.add.graphics().setDepth(45);
+    t.fillGradientStyle(0x1c2444, 0x1c2444, 0x080b18, 0x080b18, 0.97).fillRect(0, CARD_AREA_Y, W, H - CARD_AREA_Y);
+    t.fillStyle(0x000000, 0.35).fillRect(0, CARD_AREA_Y - 6, W, 6);
+    t.lineStyle(3, THEME.gold, 1).lineBetween(0, CARD_AREA_Y, W, CARD_AREA_Y);
+    t.lineStyle(1, THEME.goldLight, 0.4).lineBetween(0, CARD_AREA_Y + 3, W, CARD_AREA_Y + 3);
+    for (const x of [W * 0.25, W / 2, W * 0.75]) gem(t, x, CARD_AREA_Y, 7);
   }
 
   private refreshHud() {
@@ -577,11 +600,16 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
     const x0 = 360;
     const w = W - 700;
     const y = CARD_AREA_Y + 14;
-    this.manaBar.clear();
-    this.manaBar.fillStyle(0x000000, 0.6).fillRoundedRect(x0, y, w, 20, 8);
-    this.manaBar.fillStyle(COLORS.mana).fillRoundedRect(x0, y, Math.max(1, (w * hand.mana) / MAX_MANA), 20, 8);
-    this.manaBar.lineStyle(2, 0x0b1020);
-    for (let i = 1; i < MAX_MANA; i++) this.manaBar.lineBetween(x0 + (w * i) / MAX_MANA, y, x0 + (w * i) / MAX_MANA, y + 20);
+    const fill = (w * hand.mana) / MAX_MANA;
+    const m = this.manaBar.clear();
+    m.fillStyle(0x000000, 0.7).fillRoundedRect(x0 - 3, y - 3, w + 6, 26, 13);
+    if (fill > 2) {
+      m.fillGradientStyle(0xd8b4fe, 0xd8b4fe, 0x7e22ce, 0x7e22ce, 1).fillRoundedRect(x0, y, Math.max(20, fill), 20, 10);
+      m.fillStyle(0xffffff, 0.3).fillRoundedRect(x0 + 4, y + 2, Math.max(12, fill - 8), 5, 3);
+    }
+    m.lineStyle(2, 0x0b1020, 0.8);
+    for (let i = 1; i < MAX_MANA; i++) m.lineBetween(x0 + (w * i) / MAX_MANA, y + 1, x0 + (w * i) / MAX_MANA, y + 19);
+    m.lineStyle(2, THEME.goldDark, 1).strokeRoundedRect(x0 - 3, y - 3, w + 6, 26, 13);
     this.manaText.setX(x0 + w + 12).setText(String(Math.floor(hand.mana)));
 
     hand.hand.forEach((card, i) => {

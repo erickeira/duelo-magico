@@ -1,11 +1,13 @@
 import Phaser from 'phaser';
+import { FONT_DISPLAY, THEME, backdrop, drawBevel, shade, titleStyle, type Panel } from './theme';
+import { chestKey } from './PreloadScene';
 import { COLORS, H, W } from '../config';
 import { ARENAS, FREE_CHEST, TUTORIAL, chestById, godById, spellById, unitById } from '../data/content';
 import type { Difficulty } from '../battle/Loadout';
 import { claimFreeChest, openChest, slotState, startUnlock, tickFreeChests } from '../meta/chests';
 import { currentArena } from '../meta/progress';
 import { activeDeck, getProfile, getSave, isDeckComplete, updateSave } from '../save/save';
-import { button, hex, panel, resourceBar, showChestReward, toast, UnitTile, type Button } from './ui';
+import { ArtIcon, button, hex, panel, resourceBar, showChestReward, toast, UnitTile, type Button } from './ui';
 
 const DIFFICULTIES: { id: Difficulty; label: string }[] = [
   { id: 'facil', label: 'Fácil' },
@@ -14,8 +16,13 @@ const DIFFICULTIES: { id: Difficulty; label: string }[] = [
 ];
 
 interface SlotView {
-  bg: Phaser.GameObjects.Rectangle;
-  icon: Phaser.GameObjects.Text;
+  bg: Phaser.GameObjects.Graphics;
+  /** Área de toque. */
+  hit: Phaser.GameObjects.Zone;
+  icon: ArtIcon;
+  glow: Phaser.GameObjects.Graphics;
+  x: number;
+  y: number;
   name: Phaser.GameObjects.Text;
   status: Phaser.GameObjects.Text;
 }
@@ -35,13 +42,13 @@ export class HomeScene extends Phaser.Scene {
   private godText!: Phaser.GameObjects.Text;
   private spellsText!: Phaser.GameObjects.Text;
   private statusText!: Phaser.GameObjects.Text;
-  private deckFrame!: Phaser.GameObjects.Rectangle;
+  private deckFrame!: Panel;
   private tiles: UnitTile[] = [];
   private arenaTitle!: Phaser.GameObjects.Text;
   private arenaDesc!: Phaser.GameObjects.Text;
   private arenaBar!: Phaser.GameObjects.Graphics;
   private arenaNext!: Phaser.GameObjects.Text;
-  private diffButtons: { id: Difficulty; bg: Phaser.GameObjects.Rectangle }[] = [];
+  private diffButtons: { id: Difficulty; g: Phaser.GameObjects.Graphics; label: Phaser.GameObjects.Text }[] = [];
   private slots: SlotView[] = [];
   private freeChest!: SlotView;
   private battleBtn!: Button;
@@ -56,15 +63,15 @@ export class HomeScene extends Phaser.Scene {
     this.diffButtons = [];
     this.slots = [];
     this.modalOpen = false;
-    this.add.rectangle(W / 2, H / 2, W, H, 0x0b1020);
+    backdrop(this);
     this.refreshBar = resourceBar(this);
 
     // ---------------- deck ativo
     this.deckFrame = panel(this, 30, 64, 620, 270);
     this.arrow(62, 94, '◀', -1);
     this.arrow(618, 94, '▶', 1);
-    this.deckTitle = this.add.text(340, 94, '', { fontSize: '20px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5);
-    this.godText = this.add.text(340, 132, '', { fontSize: '22px', fontStyle: 'bold' }).setOrigin(0.5);
+    this.deckTitle = this.add.text(340, 94, '', titleStyle(22, '#ffffff')).setOrigin(0.5);
+    this.godText = this.add.text(340, 130, '', titleStyle(22)).setOrigin(0.5);
     this.spellsText = this.add.text(340, 164, '', { fontSize: '16px', color: '#e2e8f0' }).setOrigin(0.5);
     for (let i = 0; i < 8; i++) {
       const tile = new UnitTile(this, 340 + (i - 3.5) * 74, 240, 66, 82);
@@ -75,26 +82,26 @@ export class HomeScene extends Phaser.Scene {
 
     // ---------------- arena e dificuldade
     panel(this, 670, 64, 580, 270);
-    this.arenaTitle = this.add.text(960, 100, '', { fontSize: '26px', fontStyle: 'bold', color: '#facc15' }).setOrigin(0.5);
+    this.arenaTitle = this.add.text(960, 98, '', titleStyle(28)).setOrigin(0.5);
     this.arenaDesc = this.add.text(960, 140, '', { fontSize: '15px', color: '#cbd5e1', align: 'center', wordWrap: { width: 540 } }).setOrigin(0.5);
     this.arenaBar = this.add.graphics();
     this.arenaNext = this.add.text(960, 208, '', { fontSize: '14px', color: '#94a3b8' }).setOrigin(0.5);
-    this.add.text(960, 248, 'Dificuldade da IA', { fontSize: '15px', color: '#94a3b8' }).setOrigin(0.5);
+    this.add.text(960, 246, 'DIFICULDADE DA IA', { fontFamily: FONT_DISPLAY, fontSize: '15px', color: THEME.muted }).setOrigin(0.5);
     DIFFICULTIES.forEach((d, i) => {
       const x = 960 + (i - 1) * 160;
-      const bg = this.add.rectangle(x, 292, 145, 46, 0x1f2937).setStrokeStyle(3, 0x374151).setInteractive({ useHandCursor: true });
-      this.add.text(x, 292, d.label, { fontSize: '20px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5);
-      bg.on('pointerdown', () => {
+      const g = this.add.graphics({ x, y: 288 });
+      const label = this.add.text(x, 288, d.label, titleStyle(20, '#ffffff')).setOrigin(0.5);
+      this.add.zone(x, 292, 145, 50).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
         updateSave((s) => (s.difficulty = d.id));
         this.refresh();
       });
-      this.diffButtons.push({ id: d.id, bg });
+      this.diffButtons.push({ id: d.id, g, label });
     });
 
     // ---------------- baús
-    this.add.text(30, 362, 'Baús', { fontSize: '18px', fontStyle: 'bold', color: '#cbd5e1' }).setOrigin(0, 0.5);
+    this.add.text(34, 364, 'BAÚS', titleStyle(22)).setOrigin(0, 0.5);
     for (let i = 0; i < 4; i++) this.slots.push(this.slotView(130 + i * 175, 450, () => this.tapSlot(i)));
-    this.freeChest = this.slotView(1060, 450, () => this.tapFreeChest(), 0x14532d);
+    this.freeChest = this.slotView(1060, 450, () => this.tapFreeChest(), 0x1f6b3a);
 
     // ---------------- ações
     button(this, 140, 620, '🃏 Deck', 0x374151, () => this.scene.start('Deck'), { w: 210, h: 70, fontSize: 24 });
@@ -106,13 +113,39 @@ export class HomeScene extends Phaser.Scene {
     this.refresh();
   }
 
-  private slotView(x: number, y: number, onTap: () => void, fill = 0x111827): SlotView {
-    const bg = this.add.rectangle(x, y, 160, 140, fill).setStrokeStyle(3, 0x374151).setInteractive({ useHandCursor: true });
-    const icon = this.add.text(x, y - 22, '', { fontSize: '48px' }).setOrigin(0.5);
-    const name = this.add.text(x, y + 26, '', { fontSize: '14px', fontStyle: 'bold', color: '#e2e8f0' }).setOrigin(0.5);
-    const status = this.add.text(x, y + 50, '', { fontSize: '14px', fontStyle: 'bold', color: '#94a3b8' }).setOrigin(0.5);
-    bg.on('pointerdown', onTap);
-    return { bg, icon, name, status };
+  private slotView(x: number, y: number, onTap: () => void, fill = 0x1c2444): SlotView {
+    const glow = this.add.graphics({ x, y });
+    const bg = this.add.graphics({ x, y });
+    bg.setData('fill', fill);
+    const icon = new ArtIcon(this, x, y - 18, 92);
+    const name = this.add.text(x, y + 38, '', { fontFamily: FONT_DISPLAY, fontSize: '15px', color: '#e8ecff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5);
+    const status = this.add.text(x, y + 58, '', { fontFamily: FONT_DISPLAY, fontSize: '15px', color: THEME.muted, stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5);
+    const hit = this.add.zone(x, y, 160, 150).setInteractive({ useHandCursor: true });
+    hit.on('pointerdown', onTap);
+    return { bg, hit, icon, glow, x, y, name, status };
+  }
+
+  /** Moldura do espaço de baú: cor da borda conforme o estado, com brilho pulsante quando dá para abrir. */
+  private drawSlot(v: SlotView, border: number, filled: boolean, pulse: boolean) {
+    const fill = v.bg.getData('fill') as number;
+    const g = v.bg.clear();
+    g.fillStyle(0x000000, 0.45).fillRoundedRect(-78, -66, 160, 146, 14);
+    g.fillGradientStyle(shade(fill, 0.15), shade(fill, 0.15), shade(fill, -0.45), shade(fill, -0.45), filled ? 0.95 : 0.55);
+    g.fillRoundedRect(-80, -72, 160, 146, 14);
+    // Pedestal sob o baú.
+    if (filled) g.fillStyle(0x000000, 0.35).fillEllipse(0, 18, 110, 22);
+    g.lineStyle(3, border, filled ? 1 : 0.5).strokeRoundedRect(-80, -72, 160, 146, 14);
+    g.lineStyle(1, 0xffffff, 0.12).strokeRoundedRect(-76, -68, 152, 138, 11);
+    v.glow.clear();
+    if (pulse) {
+      for (let i = 3; i > 0; i--) v.glow.lineStyle(i * 4, border, 0.12).strokeRoundedRect(-80, -72, 160, 146, 14);
+      if (!v.glow.getData('tween')) {
+        v.glow.setData('tween', this.tweens.add({ targets: v.glow, alpha: { from: 1, to: 0.25 }, duration: 800, yoyo: true, repeat: -1 }));
+      }
+    } else {
+      (v.glow.getData('tween') as Phaser.Tweens.Tween | undefined)?.remove();
+      v.glow.setData('tween', null).setAlpha(1);
+    }
   }
 
   private arrow(x: number, y: number, label: string, delta: number) {
@@ -168,21 +201,22 @@ export class HomeScene extends Phaser.Scene {
       const c = p.chests[i];
       const state = slotState(p, i, now);
       const def = c && chestById(c.type);
-      v.icon.setText(def ? def.icon : '');
-      v.name.setText(def ? def.name : 'Vazio');
-      v.bg.setStrokeStyle(3, state === 'ready' ? 0x4ade80 : state === 'unlocking' ? COLORS.gold : 0x374151);
-      if (state === 'locked') v.status.setText(`Abrir: ${def!.unlockMinutes < 60 ? `${def!.unlockMinutes} min` : `${def!.unlockMinutes / 60} h`}`).setColor('#94a3b8');
-      else if (state === 'unlocking') v.status.setText(`⏳ ${clock(c!.readyAt! - now)}`).setColor('#fde68a');
+      v.icon.set(def ? chestKey(def.id) : null, def ? def.icon : '');
+      v.name.setText(def ? def.name : 'Vazio').setAlpha(def ? 1 : 0.45);
+      const border = state === 'ready' ? 0x4ade80 : state === 'unlocking' ? THEME.gold : def ? 0x6d7bc4 : THEME.line;
+      this.drawSlot(v, border, !!def, state === 'ready');
+      if (state === 'locked') v.status.setText(`🔒 ${def!.unlockMinutes < 60 ? `${def!.unlockMinutes} min` : `${def!.unlockMinutes / 60} h`}`).setColor(THEME.muted);
+      else if (state === 'unlocking') v.status.setText(`⏳ ${clock(c!.readyAt! - now)}`).setColor(THEME.goldText);
       else if (state === 'ready') v.status.setText('ABRIR!').setColor('#4ade80');
       else v.status.setText('');
     });
     const f = this.freeChest;
-    f.icon.setText('🎁');
+    f.icon.set(chestKey('madeira'), '🎁').setDim(p.freeChests === 0);
     f.name.setText(`Baú grátis (${p.freeChests}/${FREE_CHEST.maxStored})`);
     f.status
-      .setText(p.freeChests > 0 ? 'PEGAR!' : `próximo em ${clock(p.freeChestNextAt - now)}`)
-      .setColor(p.freeChests > 0 ? '#4ade80' : '#94a3b8');
-    f.bg.setStrokeStyle(3, p.freeChests > 0 ? 0x4ade80 : 0x374151);
+      .setText(p.freeChests > 0 ? 'PEGAR!' : `em ${clock(p.freeChestNextAt - now)}`)
+      .setColor(p.freeChests > 0 ? '#4ade80' : THEME.muted);
+    this.drawSlot(f, p.freeChests > 0 ? 0x4ade80 : THEME.line, true, p.freeChests > 0);
   }
 
   // ------------------------------------------------------------ geral
@@ -215,13 +249,15 @@ export class HomeScene extends Phaser.Scene {
     const to = next?.trophies ?? from;
     const frac = next ? (p.trophies - from) / (to - from) : 1;
     this.arenaBar.clear();
-    this.arenaBar.fillStyle(0x000000, 0.6).fillRoundedRect(720, 172, 480, 18, 8);
-    this.arenaBar.fillStyle(COLORS.gold).fillRoundedRect(720, 172, Math.max(8, 480 * frac), 18, 8);
+    this.arenaBar.fillStyle(0x000000, 0.65).fillRoundedRect(718, 170, 484, 22, 11);
+    this.arenaBar.fillGradientStyle(THEME.goldLight, THEME.goldLight, THEME.goldDark, THEME.goldDark, 1).fillRoundedRect(720, 172, Math.max(16, 480 * frac), 18, 9);
+    this.arenaBar.lineStyle(2, THEME.goldDark, 1).strokeRoundedRect(718, 170, 484, 22, 11);
     this.arenaNext.setText(next ? `Próxima: ${next.icon} ${next.name} com 🏆 ${next.trophies}` : 'Você chegou à última arena!');
 
     for (const b of this.diffButtons) {
       const on = b.id === save.difficulty;
-      b.bg.setStrokeStyle(on ? 4 : 3, on ? COLORS.gold : 0x374151).setFillStyle(on ? 0x374151 : 0x1f2937);
+      drawBevel(b.g, 145, 44, on ? 0xd99a2b : 0x2a3566, on);
+      b.label.setY(288 + (on ? 2 : -2)).setColor(on ? '#fff7d6' : '#b9c3e8');
     }
     this.battleBtn.setLabel(tutorial ? `TUTORIAL ${p.tutorial + 1}/${TUTORIAL.length} ▶` : 'BATALHAR ⚔️');
     this.battleBtn.setEnabled(tutorial || complete);

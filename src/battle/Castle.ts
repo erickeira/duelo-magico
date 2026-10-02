@@ -43,7 +43,7 @@ export class Castle implements Damageable {
     // A vida fica no HUD superior: jogador à esquerda, IA à direita.
     this.hpBar = scene.add.graphics().setDepth(61);
     this.hpText = scene.add
-      .text(0, HUD_HEIGHT / 2, '', { fontSize: '20px', fontStyle: 'bold', color: '#ffffff' })
+      .text(0, HUD_HEIGHT / 2, '', { fontFamily: '"Lilita One", sans-serif', fontSize: '20px', color: '#ffffff', stroke: '#000000', strokeThickness: 4 })
       .setOrigin(0.5)
       .setDepth(62);
     this.draw();
@@ -77,10 +77,16 @@ export class Castle implements Damageable {
     const y = HUD_HEIGHT / 2 - 12;
     const fill = HP_BAR_W * this.ratio;
     this.hpBar.clear();
-    this.hpBar.fillStyle(0x000000, 0.6).fillRoundedRect(x0, y, HP_BAR_W, 24, 6);
-    this.hpBar.fillStyle(isPlayer ? 0x60a5fa : 0xf87171);
+    const g = this.hpBar;
+    g.fillStyle(0x000000, 0.7).fillRoundedRect(x0 - 3, y - 3, HP_BAR_W + 6, 30, 9);
+    const [light, dark] = isPlayer ? [0x93c5fd, 0x1d4ed8] : [0xfca5a5, 0xb91c1c];
     // A barra da IA esvazia em direção à borda direita, espelhando a do jogador.
-    if (fill >= 1) this.hpBar.fillRoundedRect(isPlayer ? x0 : x0 + HP_BAR_W - fill, y, fill, 24, 6);
+    if (fill >= 1) {
+      const fx = isPlayer ? x0 : x0 + HP_BAR_W - fill;
+      g.fillGradientStyle(light, light, dark, dark, 1).fillRoundedRect(fx, y, Math.max(12, fill), 24, 7);
+      g.fillStyle(0xffffff, 0.28).fillRoundedRect(fx + 4, y + 3, Math.max(4, fill - 8), 6, 3);
+    }
+    g.lineStyle(2, 0xf5c451, 1).strokeRoundedRect(x0 - 3, y - 3, HP_BAR_W + 6, 30, 9);
     this.hpText.setX(x0 + HP_BAR_W / 2).setText(`${Math.ceil(this.hp)}`);
   }
 }

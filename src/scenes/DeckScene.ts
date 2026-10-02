@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { backdrop, type Panel } from './theme';
 import { COLORS, H, W } from '../config';
 import {
   ARENAS, BATTLE_RULES, GODS, TUTORIAL, UNITS, WORLDS, analyzeDeck, describeSpell, godById, rarityById, spellById, unitById, worldById,
@@ -6,7 +7,8 @@ import {
 } from '../data/content';
 import { isSpellUnlocked } from '../meta/progress';
 import { getProfile, getSave, isDeckComplete, updateSave, type Deck } from '../save/save';
-import { button, hex, panel, toast, UnitTile, type Button } from './ui';
+import { ArtIcon, button, hex, panel, toast, UnitTile, type Button } from './ui';
+import { spellRoundKey } from './PreloadScene';
 
 const LEFT_X = 16;
 const RIGHT_X = 336;
@@ -22,8 +24,8 @@ export class DeckScene extends Phaser.Scene {
   private deckName!: Phaser.GameObjects.Text;
   private godTitle!: Phaser.GameObjects.Text;
   private godSub!: Phaser.GameObjects.Text;
-  private godFrame!: Phaser.GameObjects.Rectangle;
-  private spellRows: { bg: Phaser.GameObjects.Rectangle; icon: Phaser.GameObjects.Text; name: Phaser.GameObjects.Text; sub: Phaser.GameObjects.Text }[] = [];
+  private godFrame!: Panel;
+  private spellRows: { bg: Phaser.GameObjects.Rectangle; icon: ArtIcon; name: Phaser.GameObjects.Text; sub: Phaser.GameObjects.Text }[] = [];
   private slots: UnitTile[] = [];
   private collection: UnitTile[] = [];
   private filterTabs: { id: string; bg: Phaser.GameObjects.Rectangle }[] = [];
@@ -53,7 +55,7 @@ export class DeckScene extends Phaser.Scene {
     this.slots = [];
     this.collection = [];
     this.filterTabs = [];
-    this.add.rectangle(W / 2, H / 2, W, H, 0x0b1020);
+    backdrop(this);
 
     // ---------------- barra superior
     button(this, 80, 34, '◀ Início', 0x374151, () => this.scene.start('Home'), { w: 140, h: 46, fontSize: 20 });
@@ -84,7 +86,7 @@ export class DeckScene extends Phaser.Scene {
     for (let i = 0; i < 5; i++) {
       const y = 232 + i * 80;
       const bg = this.add.rectangle(LEFT_X + 150, y, 276, 70, 0x1f2937).setStrokeStyle(2, 0x374151).setInteractive({ useHandCursor: true });
-      const icon = this.add.text(LEFT_X + 36, y, '', { fontSize: '34px' }).setOrigin(0.5);
+      const icon = new ArtIcon(this, LEFT_X + 36, y, 44);
       const name = this.add.text(LEFT_X + 66, y - 13, '', { fontSize: '17px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0, 0.5);
       const sub = this.add.text(LEFT_X + 66, y + 14, '', { fontSize: '13px', color: '#94a3b8' }).setOrigin(0, 0.5);
       bg.on('pointerdown', () => this.toggleSpell(i));
@@ -284,10 +286,10 @@ export class DeckScene extends Phaser.Scene {
       const s = spellById(id)!;
       const row = this.spellRows[i];
       const on = deck.spells.includes(id);
-      row.icon.setText(s.icon);
+      row.icon.set(spellRoundKey(s.id), s.icon);
       row.name.setText(s.name);
       const unlocked = isSpellUnlocked(p, id);
-      row.icon.setAlpha(unlocked ? 1 : 0.35);
+      row.icon.setDim(!unlocked);
       row.name.setColor(unlocked ? '#ffffff' : '#64748b');
       row.sub
         .setText(unlocked ? `${rarityById(s.rarity).name} · Nv ${p.spells[id]?.level ?? 1} · recarga ${s.cooldown}s` : `🔒 Deus nível ${s.godLevel}`)

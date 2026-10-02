@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { backdrop, type Panel } from './theme';
 import { COLORS, H, W } from '../config';
 import { ARENAS, MAX_UNIT_LEVEL, ROLE_LABELS, UNITS, WORLDS, rarityById, spellById, unitById, worldById, type UnitDef } from '../data/content';
 import { scaledStats } from '../battle/Loadout';
@@ -19,7 +20,7 @@ export class CollectionScene extends Phaser.Scene {
   private filterTabs: { id: string; bg: Phaser.GameObjects.Rectangle }[] = [];
   private worldFilter = '';
   private selected: UnitDef = UNITS[0];
-  private detailFrame!: Phaser.GameObjects.Rectangle;
+  private detailFrame!: Panel;
   private detailIcon!: Phaser.GameObjects.Text;
   private detailArt: Phaser.GameObjects.Image | null = null;
   private artFrame!: Phaser.GameObjects.Rectangle;
@@ -36,7 +37,7 @@ export class CollectionScene extends Phaser.Scene {
   create() {
     this.tiles = [];
     this.filterTabs = [];
-    this.add.rectangle(W / 2, H / 2, W, H, 0x0b1020);
+    backdrop(this);
     this.refreshBar = resourceBar(this);
     button(this, 80, 82, '◀ Início', 0x374151, () => this.scene.start('Home'), { w: 140, h: 44, fontSize: 20 });
 

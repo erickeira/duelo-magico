@@ -1,12 +1,14 @@
 import Phaser from 'phaser';
+import { backdrop, type Panel } from './theme';
 import { COLORS, H, W } from '../config';
 import { GOD_CASTLE_HP_PER_LEVEL, GODS, MAX_GOD_LEVEL, describeSpell, rarityById, spellById, type GodId } from '../data/content';
 import { canUpgradeSpell, godUpgradeCost, isSpellUnlocked, spellLevel, spellUpgradeCost, upgradeGod, upgradeSpell } from '../meta/progress';
 import { getProfile, updateSave } from '../save/save';
-import { button, hex, panel, resourceBar, toast, type Button } from './ui';
+import { ArtIcon, button, hex, panel, resourceBar, toast, type Button } from './ui';
+import { godFaceKey, spellRoundKey } from './PreloadScene';
 
 interface SpellRow {
-  icon: Phaser.GameObjects.Text;
+  icon: ArtIcon;
   name: Phaser.GameObjects.Text;
   desc: Phaser.GameObjects.Text;
   btn: Button;
@@ -17,7 +19,7 @@ export class GodsScene extends Phaser.Scene {
   private refreshBar!: () => void;
   private selected: GodId = 'ignar';
   private godCards: { id: GodId; bg: Phaser.GameObjects.Rectangle; status: Phaser.GameObjects.Text }[] = [];
-  private frame!: Phaser.GameObjects.Rectangle;
+  private frame!: Panel;
   private title!: Phaser.GameObjects.Text;
   private sub!: Phaser.GameObjects.Text;
   private levelInfo!: Phaser.GameObjects.Text;
@@ -31,7 +33,7 @@ export class GodsScene extends Phaser.Scene {
   create() {
     this.godCards = [];
     this.rows = [];
-    this.add.rectangle(W / 2, H / 2, W, H, 0x0b1020);
+    backdrop(this);
     this.refreshBar = resourceBar(this);
     button(this, 80, 82, '◀ Início', 0x374151, () => this.scene.start('Home'), { w: 140, h: 44, fontSize: 20 });
     this.add.text(W / 2, 82, 'Deuses e magias', { fontSize: '26px', fontStyle: 'bold', color: '#facc15' }).setOrigin(0.5);
@@ -39,7 +41,7 @@ export class GodsScene extends Phaser.Scene {
     GODS.forEach((g, i) => {
       const y = 180 + i * 136;
       const bg = this.add.rectangle(170, y, 290, 124, 0x111827).setStrokeStyle(3, 0x374151).setInteractive({ useHandCursor: true });
-      this.add.text(60, y, g.icon, { fontSize: '48px' }).setOrigin(0.5);
+      new ArtIcon(this, 64, y, 64).set(godFaceKey(g.id), g.icon);
       this.add.text(100, y - 22, g.name, { fontSize: '24px', fontStyle: 'bold', color: g.color }).setOrigin(0, 0.5);
       this.add.text(100, y + 6, g.element, { fontSize: '14px', color: '#94a3b8' }).setOrigin(0, 0.5);
       const status = this.add.text(100, y + 32, '', { fontSize: '15px', fontStyle: 'bold', color: '#fde68a' }).setOrigin(0, 0.5);
@@ -59,7 +61,7 @@ export class GodsScene extends Phaser.Scene {
     for (let i = 0; i < 5; i++) {
       const y = 320 + i * 76;
       this.add.rectangle(800, y, 896, 68, 0x1f2937).setStrokeStyle(1, 0x374151);
-      const icon = this.add.text(380, y, '', { fontSize: '34px' }).setOrigin(0.5);
+      const icon = new ArtIcon(this, 380, y, 44);
       const name = this.add.text(410, y - 18, '', { fontSize: '17px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0, 0.5);
       const desc = this.add.text(410, y + 2, '', { fontSize: '12px', color: '#cbd5e1', wordWrap: { width: 560 } }).setOrigin(0, 0);
       const btn = button(this, 1124, y, '', 0x15803d, () => this.upgradeSpell(i), { w: 250, h: 50, fontSize: 15 });
@@ -132,7 +134,7 @@ export class GodsScene extends Phaser.Scene {
       const unlocked = isSpellUnlocked(p, id);
       const lvl = spellLevel(p, id);
       const frags = p.spells[id]?.fragments ?? 0;
-      row.icon.setText(s.icon).setAlpha(unlocked ? 1 : 0.35);
+      row.icon.set(spellRoundKey(s.id), s.icon).setDim(!unlocked);
       row.name
         .setText(`${s.name}  ·  ${rarityById(s.rarity).name}${unlocked ? `  ·  Nv ${lvl}` : ''}  ·  🔹 ${frags}`)
         .setColor(unlocked ? '#ffffff' : '#64748b');

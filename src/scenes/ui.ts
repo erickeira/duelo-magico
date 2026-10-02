@@ -6,6 +6,7 @@ import { accountProgress, currentArena } from '../meta/progress';
 import { getProfile } from '../save/save';
 import { rarityFrame, type FrameObject } from './frames';
 import { cardKey, coverImage } from './PreloadScene';
+import { FONT_DISPLAY, Panel, THEME, drawBevel, titleStyle } from './theme';
 
 export const hex = (css: string) => Number.parseInt(css.slice(1), 16);
 
@@ -22,19 +23,37 @@ export function button(
 ): Button {
   const w = opts.w ?? 360;
   const h = opts.h ?? 90;
-  const bg = scene.add.rectangle(0, 0, w, h, color).setStrokeStyle(Math.max(2, h / 22), 0xffffff, 0.8);
-  const text = scene.add.text(0, 0, label, { fontSize: `${opts.fontSize ?? Math.round(h * 0.38)}px`, fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5);
-  const container = scene.add.container(x, y, [bg, text]).setSize(w, h).setInteractive({ useHandCursor: true }) as Button;
+  // Os cinzas antigos (0x374151) viram o azul-ardósia do tema.
+  const base = color === 0x374151 ? 0x3a4a86 : color;
+  const g = scene.add.graphics();
+  const size = opts.fontSize ?? Math.round(h * 0.4);
+  const text = scene.add.text(0, 0, label, { ...titleStyle(size, '#ffffff'), strokeThickness: Math.max(3, Math.round(size / 7)) }).setOrigin(0.5);
+  const container = scene.add.container(x, y, [g, text]).setSize(w, h).setInteractive({ useHandCursor: true }) as Button;
   let enabled = true;
-  container.on('pointerdown', () => enabled && container.setScale(0.95));
-  container.on('pointerout', () => container.setScale(1));
+  let pressed = false;
+  const draw = () => {
+    const dy = drawBevel(g, w, h, enabled ? base : 0x3b4058, pressed);
+    text.setY(dy - 1);
+  };
+  draw();
+  container.on('pointerdown', () => {
+    if (!enabled) return;
+    pressed = true;
+    draw();
+  });
+  container.on('pointerout', () => {
+    pressed = false;
+    draw();
+  });
   container.on('pointerup', () => {
-    container.setScale(1);
+    pressed = false;
+    draw();
     onClick();
   });
   container.setEnabled = (on: boolean) => {
     enabled = on;
-    container.setAlpha(on ? 1 : 0.45);
+    text.setAlpha(on ? 1 : 0.55);
+    draw();
   };
   container.setLabel = (t: string) => text.setText(t);
   return container;
@@ -43,15 +62,15 @@ export function button(
 /** Mensagem curta que aparece e some. */
 export function toast(scene: Phaser.Scene, message: string, y = 660, color = '#fde68a') {
   const t = scene.add
-    .text(W / 2, y, message, { fontSize: '22px', fontStyle: 'bold', color, stroke: '#000000', strokeThickness: 5, backgroundColor: '#111827cc', padding: { x: 12, y: 6 } })
+    .text(W / 2, y, message, { ...titleStyle(24, color), backgroundColor: '#0e1328e6', padding: { x: 18, y: 8 } })
     .setOrigin(0.5)
     .setDepth(200);
   scene.tweens.add({ targets: t, alpha: 0, y: y - 30, delay: 1200, duration: 500, onComplete: () => t.destroy() });
 }
 
-/** Retângulo de fundo com borda, para painéis. */
-export function panel(scene: Phaser.Scene, x: number, y: number, w: number, h: number, stroke = 0x374151) {
-  return scene.add.rectangle(x, y, w, h, 0x111827).setStrokeStyle(2, stroke).setOrigin(0);
+/** Painel ornamentado (ver theme.ts). Origem no canto superior esquerdo. */
+export function panel(scene: Phaser.Scene, x: number, y: number, w: number, h: number, accent: number = THEME.gold) {
+  return new Panel(scene, x, y, w, h, { accent: accent === 0x374151 ? THEME.gold : accent });
 }
 
 /** Miniatura de tropa: arte, moldura da raridade, custo e nome. Também serve de espaço vazio do deck. */
@@ -176,23 +195,37 @@ export class UnitTile extends Phaser.GameObjects.Container {
   }
 }
 
-export function resourceBar(scene: Phaser.Scene, y = 24): () => void {
-  scene.add.rectangle(W / 2, y, W, 48, 0x111827).setDepth(100);
-  const level = scene.add.text(16, y, '', { fontSize: '18px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0, 0.5).setDepth(101);
+/** Barra superior das telas de menu: nível, troféus/arena e moedas, em "pílulas" com borda dourada. */
+export function resourceBar(scene: Phaser.Scene, y = 26): () => void {
+  const g = scene.add.graphics().setDepth(100);
+  g.fillGradientStyle(0x1a2140, 0x1a2140, 0x0c1024, 0x0c1024, 0.96).fillRect(0, 0, W, 52);
+  g.lineStyle(2, THEME.gold, 0.9).lineBetween(0, 52, W, 52);
+  g.lineStyle(1, THEME.goldDark, 1).lineBetween(0, 55, W, 55);
+  const pill = (x: number, w: number) => {
+    g.fillStyle(0x000000, 0.45).fillRoundedRect(x, y - 16, w, 32, 16);
+    g.lineStyle(1.5, THEME.goldDark, 1).strokeRoundedRect(x, y - 16, w, 32, 16);
+  };
+  pill(12, 330);
+  pill(360, 420);
+  pill(W - 290, 278);
+  // Medalha do nível.
+  g.fillStyle(0x2563eb).fillCircle(32, y, 20).lineStyle(3, THEME.gold).strokeCircle(32, y, 20);
+  const level = scene.add.text(32, y, '', titleStyle(18, '#ffffff')).setOrigin(0.5).setDepth(101);
   const xpBar = scene.add.graphics().setDepth(101);
-  const trophies = scene.add.text(380, y, '', { fontSize: '18px', fontStyle: 'bold', color: '#fde68a' }).setOrigin(0, 0.5).setDepth(101);
-  const money = scene.add.text(W - 16, y, '', { fontSize: '20px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(1, 0.5).setDepth(101);
+  const trophies = scene.add.text(378, y, '', { fontFamily: FONT_DISPLAY, fontSize: '19px', color: THEME.goldText }).setOrigin(0, 0.5).setDepth(101);
+  const money = scene.add.text(W - 26, y, '', { fontFamily: FONT_DISPLAY, fontSize: '20px', color: '#ffffff' }).setOrigin(1, 0.5).setDepth(101);
   return () => {
     const p = getProfile();
     const xp = accountProgress(p.xp);
-    level.setText(`👤 Nv ${xp.level}`);
+    level.setText(String(xp.level));
     xpBar.clear();
-    xpBar.fillStyle(0x000000, 0.6).fillRoundedRect(110, y - 7, 200, 14, 6);
-    xpBar.fillStyle(0x38bdf8).fillRoundedRect(110, y - 7, xp.needed ? Math.max(4, (200 * xp.current) / xp.needed) : 200, 14, 6);
+    const frac = xp.needed ? Math.max(0.03, xp.current / xp.needed) : 1;
+    xpBar.fillStyle(0x000000, 0.7).fillRoundedRect(62, y - 7, 266, 14, 7);
+    xpBar.fillGradientStyle(0x7dd3fc, 0x7dd3fc, 0x0284c7, 0x0284c7, 1).fillRoundedRect(62, y - 7, 266 * frac, 14, 7);
     const arena = currentArena(p);
     const next = ARENAS[arena.index + 1];
-    trophies.setText(`🏆 ${p.trophies}${next ? ` / ${next.trophies}` : ''}   ${arena.icon} ${arena.name}`);
-    money.setText(`🪙 ${p.gold}    ✴️ ${p.essence}`);
+    trophies.setText(`🏆 ${p.trophies}${next ? ` / ${next.trophies}` : ''}    ${arena.icon} ${arena.name}`);
+    money.setText(`🪙 ${p.gold}     ✴️ ${p.essence}`);
   };
 }
 

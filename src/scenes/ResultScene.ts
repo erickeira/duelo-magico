@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { backdrop } from './theme';
 import { COLORS, H, W } from '../config';
 import { ARENAS, TUTORIAL, chestById, godById } from '../data/content';
 import type { BattleSettings } from '../battle/Loadout';
@@ -32,7 +33,7 @@ export class ResultScene extends Phaser.Scene {
     const p = getProfile();
     const tutorial = data.settings.tutorial;
 
-    this.add.rectangle(W / 2, H / 2, W, H, 0x0b1020);
+    backdrop(this);
     this.add.text(W / 2, 90, title, { fontSize: '80px', fontStyle: 'bold', color }).setOrigin(0.5);
     this.add
       .text(W / 2, 165, `Seu castelo: ${data.playerHp}   ·   Castelo da IA: ${data.enemyHp}`, { fontSize: '22px', color: '#cbd5e1' })

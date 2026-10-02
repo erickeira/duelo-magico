@@ -7,6 +7,7 @@ import { GodsScene } from './scenes/GodsScene';
 import { HomeScene } from './scenes/HomeScene';
 import { PreloadScene } from './scenes/PreloadScene';
 import { ResultScene } from './scenes/ResultScene';
+import { FONT_BODY } from './scenes/theme';
 
 /**
  * Nitidez em telas grandes: o jogo é desenhado em 1280×720 (coordenadas lógicas), mas o canvas tem
@@ -24,8 +25,14 @@ const factory = Phaser.GameObjects.GameObjectFactory.prototype as unknown as {
 };
 const addText = factory.text;
 factory.text = function (x, y, text, style) {
-  return addText.call(this, x, y, text, { resolution: RENDER_SCALE, ...style });
+  return addText.call(this, x, y, text, { resolution: RENDER_SCALE, fontFamily: FONT_BODY, ...style });
 };
+
+// As fontes do Google precisam estar prontas antes do primeiro texto (o canvas não troca a fonte depois).
+await Promise.race([
+  Promise.all(['400 20px "Lilita One"', '800 20px Nunito', '900 20px Nunito'].map((f) => document.fonts.load(f))),
+  new Promise((r) => setTimeout(r, 2500)),
+]);
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,

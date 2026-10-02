@@ -3,6 +3,7 @@ import { COLORS } from '../config';
 import { rarityById, type Rarity, type UnitDef } from '../data/content';
 import { rarityFrame, type FrameObject } from '../scenes/frames';
 import { cardKey, coverImage } from '../scenes/PreloadScene';
+import { FONT_DISPLAY, THEME } from '../scenes/theme';
 
 export const CARD_W = 110;
 export const CARD_H = 128;
@@ -38,12 +39,19 @@ export class CardView extends Phaser.GameObjects.Container {
     this.icon = scene.add.text(0, -12, '', { fontSize: '44px' }).setOrigin(0.5);
     this.nameBar = scene.add.rectangle(0, CARD_H / 2 - BORDER - 11, CARD_W - BORDER * 2, 24, 0x000000, 0.65);
     this.label = scene.add
-      .text(0, CARD_H / 2 - BORDER - 11, '', { fontSize: '12px', fontStyle: 'bold', color: '#ffffff', align: 'center', wordWrap: { width: CARD_W - BORDER * 2 - 4 } })
+      .text(0, CARD_H / 2 - BORDER - 11, '', { fontSize: '12px', fontStyle: '900', color: '#ffffff', align: 'center', stroke: '#000000', strokeThickness: 2, wordWrap: { width: CARD_W - BORDER * 2 - 4 } })
       .setOrigin(0.5);
     this.outline = scene.add.rectangle(0, 0, CARD_W, CARD_H).setStrokeStyle(3, this.rarityColor);
     this.glow = scene.add.rectangle(0, 0, CARD_W + 8, CARD_H + 8).setStrokeStyle(4, COLORS.gold).setVisible(false);
-    const gem = scene.add.circle(-CARD_W / 2 + 14, -CARD_H / 2 + 14, 15, COLORS.mana).setStrokeStyle(2, 0xffffff);
-    this.cost = scene.add.text(gem.x, gem.y, '', { fontSize: '19px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5);
+    // Gema de custo: esfera roxa com brilho e aro dourado.
+    const gem = scene.add.graphics({ x: -CARD_W / 2 + 14, y: -CARD_H / 2 + 14 });
+    gem.fillStyle(0x000000, 0.5).fillCircle(1, 2, 16);
+    gem.fillGradientStyle(0xd8b4fe, 0xd8b4fe, 0x6b21a8, 0x6b21a8, 1).fillCircle(0, 0, 15);
+    gem.fillStyle(0xffffff, 0.35).fillEllipse(-4, -6, 12, 7);
+    gem.lineStyle(2.5, THEME.gold, 1).strokeCircle(0, 0, 15);
+    this.cost = scene.add
+      .text(gem.x, gem.y, '', { fontFamily: FONT_DISPLAY, fontSize: '20px', color: '#ffffff', stroke: '#2e1065', strokeThickness: 4 })
+      .setOrigin(0.5);
     this.level = scene.add
       .text(CARD_W / 2 - 8, -CARD_H / 2 + 7, '', { fontSize: '12px', fontStyle: 'bold', color: '#fde68a', stroke: '#000000', strokeThickness: 3 })
       .setOrigin(1, 0);

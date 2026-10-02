@@ -126,3 +126,33 @@ O cenário da batalha é uma imagem pintada em visão 3/4 (câmera de lado, incl
 - Em `src/config.ts`, `ARENA_ART.lanes` guarda a linha (em px da imagem) do centro da trilha de cima e da de baixo. A batalha estica a imagem na vertical para essas linhas caírem em `LANES_Y`.
 - As praças nas pontas das trilhas fazem o papel dos castelos (a vida continua no HUD). Sem a arte, o jogo volta ao chão de grama com trilhas e castelos desenhados.
 - As tropas continuam como tokens redondos com a arte da carta.
+
+## Identidade visual da interface
+
+A interface é desenhada em código (Graphics do Phaser), então fica nítida em qualquer tela. O tema mora em `src/scenes/theme.ts`.
+
+- **Fontes** (Google Fonts, carregadas no `index.html`; o `main.ts` espera ficarem prontas antes de abrir o jogo):
+  - **Lilita One** (`FONT_DISPLAY`) para títulos, números e botões;
+  - **Nunito** (`FONT_BODY`) para o resto. É a fonte padrão de todo `add.text`.
+- **Cores:** azul-noite nos fundos, **dourado** (`THEME.gold`) em bordas e enfeites, roxo na mana, azul (jogador) e vermelho (IA) nas barras de vida.
+- **Peças prontas:**
+  - `titleStyle(tamanho, cor)`: título com contorno e sombra.
+  - `Panel`: painel em degradê com borda dupla dourada e losangos nos cantos (é o que `panel()` de `ui.ts` cria).
+  - `drawBevel`: botão em relevo, com base escura, brilho em cima e efeito de afundar ao tocar. Usado por `button()` e pelos seletores de dificuldade.
+  - `backdrop(scene)`: fundo dos menus, com o cenário da arena desfocado e escurecido, vinheta e brasas subindo.
+  - `gem()`: losango dourado usado como enfeite.
+- **Batalha:**
+  - faixa superior com medalhão do tempo e anéis dourados nos retratos dos deuses;
+  - barras de vida e de mana em degradê com aro dourado;
+  - bandeja de cartas com filete dourado;
+  - gema de custo roxa nas cartas;
+  - botões de magia com aro dourado.
+- **Home:** baús com a arte gerada em espaços que mudam de borda conforme o estado (abrindo: dourado; pronto: verde pulsante).
+- **Telas de Deuses e Deck:** retratos e ícones de magia gerados no lugar dos emojis.
+
+### Nitidez em telas grandes
+
+O jogo usa coordenadas lógicas de 1280×720, mas o canvas é desenhado `RENDER_SCALE` vezes maior (de 1 a 3, conforme o tamanho da tela e a densidade de pixels). Cada câmera aplica zoom do mesmo valor, e os textos são rasterizados na mesma escala.
+
+- Para testar, abra com `?escala=2`.
+- Em código de entrada, use `pointer.worldX/worldY`, nunca `pointer.x/y`.

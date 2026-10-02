@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Renderizador de sprites</title>
+    <style>
+      body { margin: 16px; background: #2f5d3a; color: #e5e7eb; font: 14px system-ui, sans-serif; }
+      #stage canvas { background: repeating-conic-gradient(#3a3a3a 0 25%, #2a2a2a 0 50%) 0 0 / 24px 24px; }
+      #sheets img { display: block; max-width: 100%; background: rgba(0, 0, 0, 0.25); margin-bottom: 8px; }
+      pre { background: #111827; padding: 8px; }
+    </style>
+  </head>
+  <body>
+    <h2>Renderizador de sprites</h2>
+    <p>Uso: <code>?model=golem&amp;save=1</code> (salvar só funciona com <code>npm run dev</code>).</p>
+    <div id="stage"></div>
+    <pre id="log"></pre>
+    <div id="sheets"></div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

@@ -322,7 +322,9 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
       }
     }
 
-    if (!u.canAct(this.now)) return;
+    const acting = u.canAct(this.now);
+    u.freezeAnim(!acting); // congelada/atordoada: a animação para no quadro atual
+    if (!acting) return;
     ABILITIES[u.stats.id]?.onTick?.(u, this, dt);
     if (!u.alive) return;
 
@@ -331,11 +333,17 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
     if (target) {
       if (u.cooldown <= 0) {
         u.cooldown = u.attackInterval(this.now);
+        u.playAttack(u.cooldown);
         this.attack(u, target);
-      }
+      } else u.setAnim('idle');
       return;
     }
-    if (!u.canMove(this.now)) return;
+    if (!u.canMove(this.now)) {
+      u.setAnim('idle');
+      return;
+    }
+    // O ciclo de passos acompanha a velocidade atual (lentidão, buffs).
+    u.setAnim('walk', u.moveSpeed(this.now) / u.stats.speed);
     u.x += u.dir * u.moveSpeed(this.now) * dt;
     const enemyFront = this.castles[other(u.team)].front;
     u.x = u.dir > 0 ? Math.min(u.x, enemyFront - u.radius) : Math.max(u.x, enemyFront + u.radius);
@@ -448,8 +456,11 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
     this.units = this.units.filter((u) => u.alive);
     for (const u of dead) {
       if (!u.ability.expired) ABILITIES[u.stats.id]?.onDeath?.(u, this);
-      const puff = this.add.circle(u.x, u.y, u.radius, 0xffffff, 0.6).setDepth(15);
-      this.tweens.add({ targets: puff, scale: 1.8, alpha: 0, duration: 250, onComplete: () => puff.destroy() });
+      // Tropas com sprite tocam a queda; as outras somem numa nuvem.
+      if (!u.playDeath()) {
+        const puff = this.add.circle(u.x, u.y, u.radius, 0xffffff, 0.6).setDepth(15);
+        this.tweens.add({ targets: puff, scale: 1.8, alpha: 0, duration: 250, onComplete: () => puff.destroy() });
+      }
       u.destroy();
     }
   }

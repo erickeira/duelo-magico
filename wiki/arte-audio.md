@@ -57,6 +57,34 @@ Para **regerar uma carta**, mude a descrição em `art/cards.prompts.json`, gere
 - Cartas com várias unidades (Esqueletos ×4, Arqueiras ×2) devem dizer o número na descrição.
 :::
 
+## Tropas animadas: do 3D às sprites {#sprites-animadas}
+
+O jogo é 2D, mas as tropas podem ganhar **animação de verdade** a partir de um modelo 3D. O **Golem** é o primeiro: ele anda, ataca (ergue os punhos e soca o chão) e cai. As outras tropas continuam com o token redondo até ganharem modelo.
+
+```
+arte da carta → Meshy (image to 3D + rig) → art/models/<id>.glb
+  → tools/sprite-renderer (anima os ossos por código e renderiza de lado)
+  → public/assets/sprites/<id>/{idle,walk,attack,death}.png + manifest.json
+  → no jogo: Unit troca o token pela sprite animada
+```
+
+1. **Modelo:** no [Meshy](https://www.meshy.ai), *image to 3D* com `art/cards-raw/<id>.jpg`, depois **remesh** (Adaptive, Medium, de graça) e **Rig**. Não precisa animar no Meshy: basta exportar o GLB **com o rig** e salvar em `art/models/<id>.glb`. Essa pasta fica fora do git porque os arquivos têm cerca de 40 MB.
+2. **Ossos:** o rig do Meshy usa nomes genéricos (`Bone_000`…). Em `tools/sprite-renderer/rigs.ts`, mapeie quais ossos são raiz, coluna, cabeça, ombros e cotovelos, quadris e joelhos (ver o mapa do Golem).
+3. **Animações:** também em `rigs.ts`, como funções que recebem o progresso (0 a 1) e devolvem rotações em graus. As do Golem estão em `HEAVY_ANIMS`.
+4. **Renderização:** com `npm run dev`, abra `http://localhost:5180/tools/sprite-renderer/?model=<id>&save=1`. O renderizador:
+   - usa uma câmera ortográfica de lado, um pouco de frente e de cima;
+   - usa **um único recorte para todas as animações**, para o personagem não mudar de tamanho;
+   - desenha um **contorno escuro** de 3 px, como o traço das cartas;
+   - grava as folhas e o `manifest.json` (tamanho do quadro, ponto do pé, quadros e fps) pela rota de desenvolvimento `/__sprites` do `vite.config.ts`.
+5. **No jogo:** a `PreloadScene` lê o manifest e cria as animações `<id>-idle`, `-walk`, `-attack` e `-death`.
+   - A `Unit` mostra a sprite em pé sobre uma elipse na cor do time, espelhada para a IA.
+   - Ela anda no ritmo da velocidade atual, ataca acelerando se o intervalo for curto e congela junto com os efeitos de gelo e atordoamento.
+   - Ao morrer, deixa a animação de queda no lugar.
+
+::: tip Por que animar por código e não no Meshy
+As animações prontas do Meshy custam créditos e exportações (o plano Starter tem 20 por mês). Com o rig exportado uma vez, as poses por código saem de graça, podem ser ajustadas a qualquer momento e mantêm o mesmo estilo em todas as tropas.
+:::
+
 ## Direção de arte
 
 - **Estilo:** 2D cartunesco com contorno, proporções exageradas (cabeças grandes), leitura clara em tela pequena.

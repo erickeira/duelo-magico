@@ -60,16 +60,13 @@
       "divino": "a divine treasure chest of white marble and gold with glowing celestial runes, small wings and a radiant aura"
     }
   },
-  "castles": {
-    "aspect_ratio": "9:16",
-    "template": "Tall vertical fantasy castle fortress seen from the front, a thick stone wall with battlements and two round towers stacked vertically, wooden gate in the middle, {subject}. Centered, filling the height of the image. The background is a perfectly flat solid pure green color #00FF00 with no shadows and no gradient. {style}",
-    "subjects": {
-      "player": "royal blue banners and blue roof tiles",
-      "enemy": "crimson red banners and red roof tiles"
-    }
-  },
   "ground": {
     "aspect_ratio": "16:9",
     "prompt": "Top-down view of a grassy fantasy meadow battlefield texture, stylized cartoon grass with small flowers, pebbles and a few tufts, evenly lit, uniform density across the whole image, no paths, no roads, no characters, no buildings, no trees. Stylized 2D cartoon art for a mobile strategy game with vibrant saturated colors. No text, no watermark."
+  },
+  "arena": {
+    "aspect_ratio": "16:9",
+    "image_size": "2K",
+    "prompt": "Game battlefield background for a mobile real-time strategy game, seen from an elevated three-quarter top-down camera angle, wide landscape composition. An ancient overgrown temple courtyard in a mystical forest: three long straight parallel horizontal lanes paved with worn grey cobblestone tiles run from the far left edge to the far right edge of the image, one lane in the upper third, one exactly in the middle, one in the lower third. The lanes are separated by narrow strips of low broken stone walls, moss, grass tufts and small rubble. Along the top edge: dense dark forest, giant tree roots, crumbling ruined pillars and arches. Along the bottom edge: low grass and stones. The left and right ends of the lanes are open flat stone plazas (empty space where castles will be placed). Painterly stylized fantasy art like a premium mobile game, rich detail, warm sunlight with soft shadows, slightly desaturated greens and greys so characters stand out. Empty battlefield: no characters, no creatures, no castles, no buildings in the lanes, no text, no UI, no watermark."
   }
 }

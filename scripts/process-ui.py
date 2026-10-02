@@ -7,7 +7,6 @@ Saída (public/assets/):
   gods/<id>.jpg         retrato do deus (360×480)
   gods/<id>.png         retrato redondo do rosto (160×160)
   chests/<id>.png       baú com fundo transparente (até 256 px)
-  castles/<id>.png      castelo com fundo transparente (altura 600 px)
   ground/<id>.jpg       chão da arena (1280×720)
   arena/<id>.jpg        cenário da batalha em 3/4, com as trilhas pintadas (1280 de largura)
 
@@ -59,11 +58,6 @@ def main() -> None:
         count += 1
     for f in sorted((RAW / "chests").glob("*.jpg")):
         save(fit(crop_to_content(chroma_key(Image.open(f))), 256), OUT / "chests" / f"{f.stem}.png")
-        count += 1
-    for f in sorted((RAW / "castles").glob("*.jpg")):
-        img = crop_to_content(chroma_key(Image.open(f)))
-        scale = 600 / img.height
-        save(img.resize((round(img.width * scale), 600), Image.LANCZOS), OUT / "castles" / f"{f.stem}.png")
         count += 1
     for f in sorted((RAW / "ground").glob("*.jpg")):
         img = Image.open(f).convert("RGB")

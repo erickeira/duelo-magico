@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { ARENA_BOTTOM, ARENA_LEFT, ARENA_RIGHT, ARENA_TOP, CASTLE_HP, COLORS, HUD_HEIGHT, W, type Team } from '../config';
-import { castleKey } from '../scenes/PreloadScene';
+import { ARENA_ART, ARENA_BOTTOM, ARENA_LEFT, ARENA_RIGHT, ARENA_TOP, CASTLE_HP, COLORS, HUD_HEIGHT, W, type Team } from '../config';
+import { arenaKey } from '../scenes/PreloadScene';
 import { Damageable } from './Unit';
 
 const WIDTH = 150;
@@ -29,14 +29,8 @@ export class Castle implements Damageable {
     const accent = isPlayer ? COLORS.player : COLORS.enemy;
 
     this.container = scene.add.container(this.baseX, (ARENA_TOP + ARENA_BOTTOM) / 2).setDepth(5);
-    if (scene.textures.exists(castleKey(team))) {
-      // Arte do castelo, com a base no chão da arena e a borda encostando na linha de frente.
-      const img = scene.add.image(0, 0, castleKey(team));
-      const scale = (height - 40) / img.height;
-      img.setScale(scale).setOrigin(isPlayer ? 1 : 0, 1);
-      img.setPosition(isPlayer ? WIDTH / 2 + 12 : -WIDTH / 2 - 12, height / 2);
-      this.container.add(img);
-    } else {
+    // No cenário pintado, as praças nas pontas das trilhas já são a base do castelo; sem ele, desenha um bloco.
+    if (!scene.textures.exists(arenaKey(ARENA_ART.id))) {
       this.container.add(scene.add.rectangle(0, 0, WIDTH - 10, height, color).setStrokeStyle(4, accent));
       // Ameias na frente voltada para a arena.
       const edge = isPlayer ? WIDTH / 2 + 4 : -WIDTH / 2 - 4;

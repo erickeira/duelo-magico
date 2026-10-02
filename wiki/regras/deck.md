@@ -14,8 +14,8 @@ Toda batalha começa com três escolhas: **deus**, **duas magias** e **deck de t
 - Cada deck salvo guarda **deus + 2 magias + 8 tropas**. Trocar de deck troca tudo de uma vez.
 - O botão **Batalhar** só fica ativo se o deck estiver completo.
 
-::: info No jogo hoje (v0.3)
-Tudo está liberado: qualquer deus, magia e tropa pode entrar no deck. Os desbloqueios por troféus e o nível do deus entram com a [progressão](/progressao) na v0.4.
+::: info No jogo hoje (v0.4)
+Só entra no deck o que o jogador já conquistou: tropas que ele tem, deuses liberados por troféus e magias liberadas pelo nível do deus. O que ainda está bloqueado aparece com 🔒 e diz como liberar.
 :::
 
 ## Fluxo de escolha
@@ -34,7 +34,7 @@ No jogo: toque numa tropa da coleção para colocá-la no primeiro espaço livre
 
 ## Deck inicial
 
-O jogador começa com as 9 tropas comuns e o deus **Ignar** com a magia **Cometa Rubro**. O primeiro deck vem montado:
+O jogador começa com as 9 tropas comuns e o deus **Ignar** com as magias comuns **Cometa Rubro** e **Brado de Guerra**. O primeiro deck vem montado:
 
 <DeckList god="ignar" />
 

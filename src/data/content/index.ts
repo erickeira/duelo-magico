@@ -7,11 +7,13 @@ export * from './progression';
 export * from './economy';
 export * from './rules';
 export * from './deck';
+export * from './tutorial';
 
 import { GODS } from './gods';
 import { SPELLS } from './spells';
 import { UNITS } from './units';
 import { BATTLE_RULES } from './rules';
+import { TUTORIAL } from './tutorial';
 
 /** Verifica referências cruzadas do conteúdo. Retorna a lista de problemas (vazia = ok). */
 export function validateContent(): string[] {
@@ -39,5 +41,11 @@ export function validateContent(): string[] {
       for (const id of d.spells) if (!g.spells.includes(id)) problems.push(`${g.id}/${d.name}: magia "${id}" não é de ${g.name}`);
     }
   }
+  TUTORIAL.forEach((t, i) => {
+    for (const id of [...t.player.units, ...t.enemy.units]) if (!unitIds.has(id)) problems.push(`tutorial ${i + 1}: tropa desconhecida "${id}"`);
+    for (const id of t.player.spells) {
+      if (SPELLS.find((x) => x.id === id)?.god !== t.player.god) problems.push(`tutorial ${i + 1}: magia "${id}" não é de ${t.player.god}`);
+    }
+  });
   return problems;
 }

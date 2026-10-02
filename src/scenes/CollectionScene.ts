@@ -1,14 +1,18 @@
 import Phaser from 'phaser';
 import { COLORS, H, W } from '../config';
-import { ARENAS, ROLE_LABELS, UNITS, WORLDS, rarityById, spellById, unitById, worldById, type UnitDef } from '../data/content';
-import { button, hex, panel, UnitTile } from './ui';
+import { ARENAS, MAX_UNIT_LEVEL, ROLE_LABELS, UNITS, WORLDS, rarityById, spellById, unitById, worldById, type UnitDef } from '../data/content';
+import { scaledStats } from '../battle/Loadout';
+import { canUpgradeUnit, unitUpgradeCost, upgradeUnit } from '../meta/progress';
+import { getProfile, updateSave } from '../save/save';
+import { button, hex, panel, resourceBar, toast, UnitTile, type Button } from './ui';
 
 const COLS = 6;
 const TILE_W = 118;
 const TILE_H = 136;
 
-/** Coleção: todas as tropas, filtráveis por mundo, com ficha detalhada. */
+/** Coleção: todas as tropas (conquistadas ou não), com ficha detalhada e upgrade. */
 export class CollectionScene extends Phaser.Scene {
+  private refreshBar!: () => void;
   private tiles: UnitTile[] = [];
   private filterTabs: { id: string; bg: Phaser.GameObjects.Rectangle }[] = [];
   private worldFilter = '';
@@ -17,6 +21,7 @@ export class CollectionScene extends Phaser.Scene {
   private detailIcon!: Phaser.GameObjects.Text;
   private detailName!: Phaser.GameObjects.Text;
   private detailBody!: Phaser.GameObjects.Text;
+  private upgradeBtn!: Button;
 
   constructor() {
     super('Collection');
@@ -26,14 +31,14 @@ export class CollectionScene extends Phaser.Scene {
     this.tiles = [];
     this.filterTabs = [];
     this.add.rectangle(W / 2, H / 2, W, H, 0x0b1020);
-    button(this, 80, 34, '◀ Início', 0x374151, () => this.scene.start('Home'), { w: 140, h: 46, fontSize: 20 });
-    this.add.text(W / 2, 34, `Coleção · ${UNITS.length} tropas`, { fontSize: '28px', fontStyle: 'bold', color: '#facc15' }).setOrigin(0.5);
+    this.refreshBar = resourceBar(this);
+    button(this, 80, 82, '◀ Início', 0x374151, () => this.scene.start('Home'), { w: 140, h: 44, fontSize: 20 });
 
     const filters = [{ id: '', label: 'Todas' }, ...WORLDS.map((w) => ({ id: w.id, label: `${w.icon} ${w.name}` }))];
     filters.forEach((f, i) => {
-      const x = 100 + i * 190;
-      const bg = this.add.rectangle(x, 90, 180, 38, 0x111827).setStrokeStyle(2, 0x374151).setInteractive({ useHandCursor: true });
-      this.add.text(x, 90, f.label, { fontSize: '16px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5);
+      const x = 240 + i * 150;
+      const bg = this.add.rectangle(x, 82, 142, 40, 0x111827).setStrokeStyle(2, 0x374151).setInteractive({ useHandCursor: true });
+      this.add.text(x, 82, f.label, { fontSize: '14px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5);
       bg.on('pointerdown', () => {
         this.worldFilter = f.id;
         this.refresh();
@@ -50,16 +55,30 @@ export class CollectionScene extends Phaser.Scene {
       this.tiles.push(tile);
     }
 
-    this.detailFrame = panel(this, 820, 70, 444, 636);
-    this.detailIcon = this.add.text(870, 120, '', { fontSize: '64px' }).setOrigin(0.5);
-    this.detailName = this.add.text(915, 104, '', { fontSize: '26px', fontStyle: 'bold', color: '#ffffff', wordWrap: { width: 330 } }).setOrigin(0, 0);
-    this.detailBody = this.add
-      .text(836, 175, '', { fontSize: '15px', color: '#e2e8f0', wordWrap: { width: 412 }, lineSpacing: 5 })
-      .setOrigin(0, 0);
+    this.detailFrame = panel(this, 820, 58, 444, 648);
+    this.detailIcon = this.add.text(870, 104, '', { fontSize: '60px' }).setOrigin(0.5);
+    this.detailName = this.add.text(915, 84, '', { fontSize: '24px', fontStyle: 'bold', color: '#ffffff', wordWrap: { width: 330 } });
+    this.detailBody = this.add.text(836, 150, '', { fontSize: '14px', color: '#e2e8f0', wordWrap: { width: 412 }, lineSpacing: 4 });
+    this.upgradeBtn = button(this, 1042, 666, '', 0x15803d, () => this.upgrade(), { w: 400, h: 54, fontSize: 19 });
+    this.refresh();
+  }
+
+  private upgrade() {
+    const u = this.selected;
+    const cost = unitUpgradeCost(getProfile(), u.id);
+    if (!cost) return;
+    if (!canUpgradeUnit(getProfile(), u.id)) {
+      toast(this, 'Faltam cartas ou ouro', 600);
+      return;
+    }
+    const xp = updateSave((s) => upgradeUnit(s, u.id));
+    toast(this, `${u.icon} ${u.name} subiu para o nível ${cost.level}! +${xp} XP`, 600, '#4ade80');
     this.refresh();
   }
 
   private refresh() {
+    this.refreshBar();
+    const p = getProfile();
     for (const f of this.filterTabs) {
       const on = f.id === this.worldFilter;
       f.bg.setStrokeStyle(on ? 3 : 2, on ? COLORS.gold : 0x374151).setFillStyle(on ? 0x1f2937 : 0x111827);
@@ -70,39 +89,56 @@ export class CollectionScene extends Phaser.Scene {
       const visible = !this.worldFilter || u.world === this.worldFilter;
       tile.setVisible(visible);
       if (!visible) continue;
-      tile.setPosition(78 + (n % COLS) * 128, 196 + Math.floor(n / COLS) * 146);
-      tile.setHighlight(u === this.selected);
+      tile.setPosition(78 + (n % COLS) * 128, 190 + Math.floor(n / COLS) * 146);
+      tile.setHighlight(u === this.selected).setLocked(!p.units[u.id]).setLevel(p.units[u.id]?.level ?? null).setUpgradable(canUpgradeUnit(p, u.id));
       n++;
     }
     this.showDetail(this.selected);
   }
 
   private showDetail(u: UnitDef) {
+    const p = getProfile();
+    const owned = p.units[u.id];
     const rarity = rarityById(u.rarity);
     const world = worldById(u.world);
+    const level = owned?.level ?? rarity.startLevel;
+    const s = scaledStats(u, level);
     const names = (ids: string[]) => ids.map((id) => unitById(id)?.name ?? spellById(id)?.name ?? id).join(', ');
     const fmt = (n: number) => String(n).replace('.', ',');
-    const dps = Math.round((u.damage / u.attackInterval) * u.count);
+    const dps = Math.round((s.damage / u.attackInterval) * u.count);
+    const cost = unitUpgradeCost(p, u.id);
+
     this.detailFrame.setStrokeStyle(3, hex(rarity.color));
-    this.detailIcon.setText(u.icon);
-    this.detailName.setText(`${u.name}${u.count > 1 ? ` ×${u.count}` : ''}`);
+    this.detailIcon.setText(u.icon).setAlpha(owned ? 1 : 0.35);
+    this.detailName.setText(`${u.name}${u.count > 1 ? ` ×${u.count}` : ''}\n${owned ? `Nível ${level}` : '🔒 Não conquistada'}`);
+
+    const progress = !owned
+      ? `🔒 Cai nos baús a partir da arena ${ARENAS[u.arena].icon} ${ARENAS[u.arena].name} (🏆 ${ARENAS[u.arena].trophies}).`
+      : cost
+        ? `🃏 Cartas ${owned.cards}/${cost.cards}   ·   próximo nível: +8% vida e dano`
+        : `Nível máximo (${MAX_UNIT_LEVEL})!`;
     const lines = [
       `${rarity.name} · ${world.icon} ${world.name} · 💧 ${u.cost} de mana`,
       u.roles.map((r) => ROLE_LABELS[r]).join(', ') + (u.targetsAir && !u.flying ? ' · acerta voadores' : ''),
       '',
+      progress,
+      '',
       u.description,
       '',
-      `Vida ${u.hp}${u.count > 1 ? ' (cada)' : ''}   ·   Dano ${u.damage}   ·   a cada ${fmt(u.attackInterval)}s`,
-      `DPS total ${dps}   ·   Alcance ${u.range <= 40 ? 'corpo a corpo' : u.range}   ·   Velocidade ${u.speed || 'parada'}`,
-      [u.splash && `Área ${u.splash}`, u.lifetime && `Dura ${u.lifetime}s`, u.flying && 'Voa'].filter(Boolean).join('   ·   '),
-      '',
-      u.ability ? `✦ ${u.ability.name}: ${u.ability.description}` : '',
+      `Vida ${s.hp}${u.count > 1 ? ' (cada)' : ''}  ·  Dano ${s.damage}  ·  a cada ${fmt(u.attackInterval)}s`,
+      `DPS total ${dps}  ·  Alcance ${u.range <= 40 ? 'corpo a corpo' : u.range}  ·  Velocidade ${u.speed || 'parada'}`,
+      [u.splash && `Área ${u.splash}`, u.lifetime && `Dura ${u.lifetime}s`, u.flying && 'Voa'].filter(Boolean).join('  ·  '),
+      u.ability ? `\n✦ ${u.ability.name}: ${u.ability.description}` : '',
       '',
       `✅ Forte contra: ${names(u.strongAgainst)}`,
       `❌ Fraco contra: ${names(u.weakAgainst)}`,
-      '',
-      `Cai nos baús a partir da arena ${ARENAS[u.arena].icon} ${ARENAS[u.arena].name}`,
     ];
     this.detailBody.setText(lines.filter((l, i, arr) => l !== '' || arr[i - 1] !== '').join('\n'));
+
+    this.upgradeBtn.setVisible(!!owned && !!cost);
+    if (owned && cost) {
+      this.upgradeBtn.setLabel(`Subir para Nv ${cost.level}  ·  🃏 ${cost.cards}  🪙 ${cost.gold}`);
+      this.upgradeBtn.setEnabled(canUpgradeUnit(p, u.id));
+    }
   }
 }

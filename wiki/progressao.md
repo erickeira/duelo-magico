@@ -48,10 +48,13 @@ troféus ───────────▶ ARENAS ────────▶
 
 ## Pareamento contra a IA
 
-Para a progressão não deixar a IA fácil ou impossível demais, o oponente usa:
+Para a progressão não deixar a IA fácil ou impossível demais (`enemyLoadout` em `src/battle/Loadout.ts`):
 
-- **o nível médio das tropas do seu deck** (arredondado), ±1 conforme a dificuldade;
-- um deck da **sua arena atual** (ver [IA do oponente](/ia)).
+- **Níveis das tropas:** calcula-se quantos níveis, em média, as tropas do seu deck estão acima do nível inicial da raridade. A IA usa essa mesma vantagem (arredondada), −1 no Fácil e +1 no Difícil.
+- **Níveis das magias:** a média das suas duas magias, ±1 pela dificuldade.
+- **Vida do castelo:** igual à sua.
+- **Cartas:** só tropas da **sua arena atual e das anteriores**. As tropas do deck sugerido que ainda não existem na sua arena são trocadas por outras permitidas.
+- **Magias:** só as liberadas até o nível do **seu** deus (ver [IA do oponente](/ia)).
 
 ## Princípios
 

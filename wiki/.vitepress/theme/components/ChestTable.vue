@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { CHESTS } from '@content/index';
+import { CHESTS, RARITIES, type ChestDef } from '@content/index';
 import { fmt } from './util';
 
 const time = (min: number) => (min < 60 ? `${min} min` : `${min / 60} h`);
+const guaranteed = (c: ChestDef) =>
+  RARITIES.filter((r) => c.guaranteed[r.id]).map((r) => `${c.guaranteed[r.id]} ${r.name.toLowerCase()}${c.guaranteed[r.id]! > 1 ? 's' : ''}`).join(' + ') || '—';
 </script>
 
 <template>
@@ -18,7 +20,7 @@ const time = (min: number) => (min < 60 ? `${min} min` : `${min / 60} h`);
           <td>{{ time(c.unlockMinutes) }}</td>
           <td>{{ fmt(c.gold[0]) }}–{{ fmt(c.gold[1]) }}</td>
           <td>{{ c.cards }}</td>
-          <td>{{ c.guaranteed }}</td>
+          <td>{{ guaranteed(c) }}</td>
           <td>{{ c.essence }}</td>
           <td>{{ c.spellFragments }}</td>
         </tr>

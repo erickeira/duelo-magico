@@ -56,6 +56,8 @@ export class Unit extends Phaser.GameObjects.Container implements Damageable {
   alive = true;
   cooldown = 0;
   kills = 0;
+  /** Nível da carta (1–10). */
+  level = 1;
   /** Momento (segundos de partida) em que a tropa some: construções e invocações. */
   expiresAt?: number;
   /** Multiplicador fixo de dano recebido (ex.: Lanceiros de Luz evoluídos). */

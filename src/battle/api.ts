@@ -15,6 +15,8 @@ export interface SpawnOptions {
   /** Segundos até a tropa sumir (invocações). */
   duration?: number;
   onExpire?: (u: Unit) => void;
+  /** Nível da tropa (para habilidades que invocam outras no mesmo nível). */
+  level?: number;
 }
 
 /** O que habilidades, magias e IA podem fazer na batalha. Implementado pelo BattleScene. */

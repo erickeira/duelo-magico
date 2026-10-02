@@ -1,5 +1,6 @@
 import { other } from '../config';
-import { unitById } from '../data/content';
+import { rarityById, unitById } from '../data/content';
+import { scaledStats } from './Loadout';
 import type { BattleApi } from './api';
 import { Castle } from './Castle';
 import type { Unit } from './Unit';
@@ -27,12 +28,16 @@ function every(u: Unit, key: string, dt: number, period: number, fn: () => void)
   } else u.ability[key] = t;
 }
 
-/** Invoca `count` esqueletos (atributos da carta Esqueletos) na frente de `u`. */
+/** Invoca `count` esqueletos na frente de `u`, tantos níveis acima do inicial quanto a tropa que invoca. */
 function raiseSkeletons(u: Unit, api: BattleApi, count: number, ahead: number) {
   const def = unitById('esqueletos')!;
+  const summoner = unitById(u.stats.id);
+  const bonus = summoner ? u.level - rarityById(summoner.rarity).startLevel : 0;
+  const level = rarityById(def.rarity).startLevel + Math.max(0, bonus);
+  const stats = scaledStats(def, level);
   for (let i = 0; i < count; i++) {
     const dy = (i - (count - 1) / 2) * 22;
-    const s = api.spawnUnit(u.team, def, u.lane, u.x + u.dir * ahead, { summoned: true });
+    const s = api.spawnUnit(u.team, stats, u.lane, u.x + u.dir * ahead, { summoned: true, level });
     s.y += dy;
   }
 }

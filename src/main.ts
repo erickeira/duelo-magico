@@ -3,6 +3,7 @@ import { H, W } from './config';
 import { BattleScene } from './scenes/BattleScene';
 import { CollectionScene } from './scenes/CollectionScene';
 import { DeckScene } from './scenes/DeckScene';
+import { GodsScene } from './scenes/GodsScene';
 import { HomeScene } from './scenes/HomeScene';
 import { ResultScene } from './scenes/ResultScene';
 
@@ -17,7 +18,7 @@ const game = new Phaser.Game({
     height: H,
   },
   input: { activePointers: 2 },
-  scene: [HomeScene, DeckScene, CollectionScene, BattleScene, ResultScene],
+  scene: [HomeScene, DeckScene, CollectionScene, GodsScene, BattleScene, ResultScene],
 });
 
 // Facilita depuração no console do navegador durante o desenvolvimento.

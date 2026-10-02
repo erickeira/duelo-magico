@@ -27,7 +27,7 @@ export const SPELLS: SpellDef[] = [
       { level: 3, description: 'Também concede +20% de dano.' },
       { level: 5, description: 'Duração aumenta para 9s.' },
     ],
-    godLevel: 2,
+    godLevel: 1,
   },
   {
     id: 'muralha-fogo', name: 'Muralha de Fogo', icon: '🔥', god: 'ignar', rarity: 'rara', target: 'ponto',
@@ -84,7 +84,7 @@ export const SPELLS: SpellDef[] = [
       { level: 3, description: 'Atordoamento aumenta para 2,5s.' },
       { level: 5, description: 'Cria uma onda de choque: 50% do dano num raio de 100.' },
     ],
-    godLevel: 2,
+    godLevel: 1,
   },
   {
     id: 'bencao-luz', name: 'Bênção da Luz', icon: '💖', god: 'solenne', rarity: 'rara', target: 'ponto',
@@ -141,7 +141,7 @@ export const SPELLS: SpellDef[] = [
       { level: 3, description: 'Dispara 4 lanças.' },
       { level: 5, description: 'Cada lança congela por 0,5s.' },
     ],
-    godLevel: 2,
+    godLevel: 1,
   },
   {
     id: 'prisao-cristal', name: 'Prisão de Cristal', icon: '❄️', god: 'hyela', rarity: 'rara', target: 'ponto',
@@ -198,7 +198,7 @@ export const SPELLS: SpellDef[] = [
       { level: 3, description: 'A tropa também fica imune a empurrões e atordoamento.' },
       { level: 5, description: 'O efeito passa a ser permanente.' },
     ],
-    godLevel: 2,
+    godLevel: 1,
   },
   {
     id: 'revoada', name: 'Revoada', icon: '🐦‍⬛', god: 'thalor', rarity: 'rara', target: 'trilha',

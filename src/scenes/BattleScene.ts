@@ -4,15 +4,16 @@ import {
   COLORS, DOUBLE_MANA_AT, H, HAND_SIZE, HUD_HEIGHT, LANES_Y, LANE_HEIGHT, MANA_PER_SEC, MATCH_TIME, MAX_MANA, MID_X, OVERTIME,
   SPAWN_MARGIN, W, other, type Team,
 } from '../config';
-import { BATTLE_RULES, godById, spellById, type SpellDef, type UnitDef } from '../data/content';
+import { BATTLE_RULES, TUTORIAL, godById, spellById, type SpellDef, type UnitDef } from '../data/content';
 import { ABILITIES, auraDamageMult } from '../battle/abilities';
 import { Ai } from '../battle/Ai';
 import type { ArenaEffect, BattleApi, SpawnOptions } from '../battle/api';
 import { CARD_W, CardView } from '../battle/CardView';
 import { Castle } from '../battle/Castle';
 import { Hand } from '../battle/Hand';
-import { loadoutForGod, loadoutFromDeck, randomGod, type BattleSettings, type Loadout } from '../battle/Loadout';
-import { activeDeck, getSave } from '../save/save';
+import { enemyLoadout, loadoutFromDeck, randomGod, scaledStats, tutorialLoadouts, type BattleSettings, type Loadout } from '../battle/Loadout';
+import { applyBattleResult, currentArena } from '../meta/progress';
+import { activeDeck, getProfile, getSave, updateSave } from '../save/save';
 import { SpellButton } from '../battle/SpellButton';
 import { castSpell, pickAlly } from '../battle/spells';
 import { Unit, type StatusKind, type UnitStats } from '../battle/Unit';
@@ -74,7 +75,7 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
   }
 
   init(data: Partial<BattleSettings>) {
-    this.settings = { deck: data.deck ?? activeDeck(), difficulty: data.difficulty ?? getSave().difficulty };
+    this.settings = { deck: data.deck ?? activeDeck(), difficulty: data.difficulty ?? getSave().difficulty, tutorial: data.tutorial };
     this.units = [];
     this.projectiles = [];
     this.effects = [];
@@ -88,11 +89,18 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
   }
 
   create() {
-    const player = loadoutFromDeck(this.settings.deck);
-    const enemy = { ...loadoutForGod(randomGod()), spellLevel: player.spellLevel };
-    this.loadouts = { player, enemy };
+    const tutorial = this.settings.tutorial;
+    if (tutorial !== undefined) {
+      this.loadouts = tutorialLoadouts(tutorial);
+    } else {
+      const profile = getProfile();
+      const player = loadoutFromDeck(this.settings.deck, profile);
+      const ctx = { arena: currentArena(profile).index, godLevel: profile.gods[player.god]?.level ?? 1 };
+      this.loadouts = { player, enemy: enemyLoadout(randomGod(), player, this.settings.difficulty, ctx) };
+    }
+    const { player, enemy } = this.loadouts;
     this.drawArena();
-    this.castles = { player: new Castle(this, 'player'), enemy: new Castle(this, 'enemy') };
+    this.castles = { player: new Castle(this, 'player', player.castleHp), enemy: new Castle(this, 'enemy', enemy.castleHp) };
     this.hands = { player: new Hand(player.units), enemy: new Hand(enemy.units) };
     const slots = (l: Loadout) =>
       l.spells.map((id) => {
@@ -100,9 +108,10 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
         return { def, readyAt: def.initialCooldown, total: def.initialCooldown };
       });
     this.spells = { player: slots(player), enemy: slots(enemy) };
-    this.ai = new Ai(this, this.hands.enemy, this.settings.difficulty);
+    this.ai = new Ai(this, this.hands.enemy, tutorial !== undefined ? 'tutorial' : this.settings.difficulty);
     this.createHud();
     this.setupInput();
+    if (tutorial !== undefined) this.showTutorialHints(tutorial);
   }
 
   update(_time: number, deltaMs: number) {
@@ -132,6 +141,7 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
 
   spawnUnit(team: Team, stats: UnitStats, lane: number, x: number, opts: SpawnOptions = {}): Unit {
     const u = new Unit(this, team, stats, x, LANES_Y[lane], lane, !!opts.summoned);
+    if (opts.level) u.level = opts.level;
     if (stats.lifetime) u.expiresAt = this.now + stats.lifetime;
     if (opts.duration) u.expiresAt = this.now + opts.duration;
     if (opts.onExpire) u.ability.onExpire = opts.onExpire;
@@ -261,8 +271,10 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
 
   private spawnCard(team: Team, card: UnitDef, lane: number, x: number) {
     const dir = team === 'player' ? 1 : -1;
+    const level = this.loadouts[team].unitLevels[card.id];
+    const stats = scaledStats(card, level);
     for (let i = 0; i < card.count; i++) {
-      const u = this.spawnUnit(team, card, lane, x - dir * (i % 2) * 14);
+      const u = this.spawnUnit(team, stats, lane, x - dir * (i % 2) * 14, { level });
       u.y += card.count > 1 ? (i - (card.count - 1) / 2) * 24 : 0;
     }
   }
@@ -282,7 +294,7 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
       unit: slot.def.target === 'aliado' ? pickAlly(this, team, x, y) : undefined,
     };
     if (slot.def.target === 'aliado' && !target.unit) return false;
-    castSpell(this, team, slot.def, this.loadouts[team].spellLevel, target);
+    castSpell(this, team, slot.def, this.loadouts[team].spellLevels[index] ?? 1, target);
     slot.readyAt = this.now + slot.def.cooldown;
     slot.total = slot.def.cooldown;
     if (team === 'enemy') this.floatText(ARENA_RIGHT - 60, ARENA_TOP + 20, `${slot.def.icon} ${slot.def.name}`, '#fca5a5');
@@ -465,12 +477,15 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
     }
     if (!result) return;
     this.over = true;
+    const outcome = result;
+    const rewards = updateSave((s) => applyBattleResult(s, outcome, this.settings.tutorial ?? null));
     this.time.delayedCall(1200, () =>
       this.scene.start('Result', {
         result,
         playerHp: Math.ceil(player.hp),
         enemyHp: Math.ceil(enemy.hp),
         settings: this.settings,
+        rewards,
       }),
     );
   }
@@ -553,14 +568,35 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
 
     hand.hand.forEach((card, i) => {
       const view = this.cardViews[i];
-      view.setCard(card);
+      view.setCard(card, this.loadouts.player.unitLevels[card.id]);
       view.setPlayable(hand.canPlay(i));
       view.setSelected(this.selection?.kind === 'card' && this.selection.index === i);
     });
-    this.nextView.setCard(hand.next);
+    // No tutorial o deck pode ter menos cartas que a mão.
+    this.cardViews.forEach((v, i) => v.setVisible(i < hand.hand.length));
+    this.nextView.setVisible(!!hand.next);
+    if (hand.next) this.nextView.setCard(hand.next, this.loadouts.player.unitLevels[hand.next.id]);
     this.spellButtons.forEach((b, i) =>
       b.refresh(this.spellRemaining('player', i), this.spells.player[i].total, this.selection?.kind === 'spell' && this.selection.index === i),
     );
+  }
+
+  /** Faixa com as dicas do tutorial, trocando a cada 6s. */
+  private showTutorialHints(step: number) {
+    const t = TUTORIAL[step];
+    const banner = this.add
+      .text(W / 2, ARENA_TOP + 26, '', {
+        fontSize: '22px', fontStyle: 'bold', color: '#fef3c7', backgroundColor: '#111827dd', padding: { x: 14, y: 8 },
+      })
+      .setOrigin(0.5)
+      .setDepth(90);
+    let i = 0;
+    const show = () => {
+      banner.setText(`${t.title}  ·  ${t.hints[i % t.hints.length]}`);
+      i++;
+    };
+    show();
+    this.time.addEvent({ delay: 6000, loop: true, callback: show });
   }
 
   // ================================================================ input

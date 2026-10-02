@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
 import { COLORS, H, W } from '../config';
 import {
-  BATTLE_RULES, GODS, UNITS, WORLDS, analyzeDeck, describeSpell, godById, rarityById, spellById, unitById, worldById,
+  ARENAS, BATTLE_RULES, GODS, TUTORIAL, UNITS, WORLDS, analyzeDeck, describeSpell, godById, rarityById, spellById, unitById, worldById,
   type SpellDef, type UnitDef,
 } from '../data/content';
-import { getSave, isDeckComplete, updateSave, type Deck } from '../save/save';
+import { isSpellUnlocked } from '../meta/progress';
+import { getProfile, getSave, isDeckComplete, updateSave, type Deck } from '../save/save';
 import { button, hex, panel, toast, UnitTile, type Button } from './ui';
 
 const LEFT_X = 16;
@@ -138,12 +139,19 @@ export class DeckScene extends Phaser.Scene {
   private godArrow(x: number, delta: number, label: string) {
     const t = this.add.text(x, 108, label, { fontSize: '26px', color: '#cbd5e1' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     t.on('pointerdown', () => {
-      const idx = GODS.findIndex((g) => g.id === this.deck.god);
-      const next = GODS[(idx + delta + GODS.length) % GODS.length];
-      // Ao trocar de deus, as magias passam a ser as sugeridas para ele; as tropas ficam.
+      // Só deuses já liberados entram no carrossel.
+      const p = getProfile();
+      const gods = GODS.filter((g) => p.gods[g.id]);
+      if (gods.length < 2) {
+        toast(this, 'Ganhe troféus para liberar outros deuses');
+        return;
+      }
+      const idx = gods.findIndex((g) => g.id === this.deck.god);
+      const next = gods[(idx + delta + gods.length) % gods.length];
+      // Ao trocar de deus, as magias passam a ser as liberadas sugeridas para ele; as tropas ficam.
       this.edit((d) => {
         d.god = next.id;
-        d.spells = [...next.suggestedDecks[0].spells];
+        d.spells = next.suggestedDecks[0].spells.filter((id) => isSpellUnlocked(p, id));
       });
       this.info.setText(`${next.icon} ${next.name}, ${next.title}: ${next.summary}`);
     });
@@ -153,6 +161,10 @@ export class DeckScene extends Phaser.Scene {
     const god = godById(this.deck.god)!;
     const spell = spellById(god.spells[i])!;
     this.showSpell(spell);
+    if (!isSpellUnlocked(getProfile(), spell.id)) {
+      toast(this, `🔒 Liberada quando ${god.name} chegar ao nível ${spell.godLevel}`);
+      return;
+    }
     this.edit((d) => {
       if (d.spells.includes(spell.id)) d.spells = d.spells.filter((s) => s !== spell.id);
       else {
@@ -177,6 +189,10 @@ export class DeckScene extends Phaser.Scene {
 
   private tapCollection(u: UnitDef) {
     this.showUnit(u);
+    if (!getProfile().units[u.id]) {
+      toast(this, `🔒 ${u.name}: ganhe em baús a partir da arena ${ARENAS[u.arena].name}`);
+      return;
+    }
     const units = this.deck.units;
     if (units.includes(u.id)) {
       toast(this, `${u.name} já está no deck`);
@@ -198,12 +214,15 @@ export class DeckScene extends Phaser.Scene {
   private restoreSuggested() {
     const god = godById(this.deck.god)!;
     const s = god.suggestedDecks[0];
+    const p = getProfile();
+    // Só entra o que o jogador já tem; o resto fica vazio para ele completar.
     this.edit((d) => {
       d.name = s.name;
-      d.spells = [...s.spells];
-      d.units = [...s.units];
+      d.spells = s.spells.filter((id) => isSpellUnlocked(p, id));
+      d.units = s.units.filter((id) => p.units[id]);
     });
-    toast(this, `Deck "${s.name}" restaurado`);
+    const missing = s.units.filter((id) => !p.units[id]).length;
+    toast(this, missing ? `Deck "${s.name}" restaurado (faltam ${missing} tropa(s) que você ainda não tem)` : `Deck "${s.name}" restaurado`);
   }
 
   private rename() {
@@ -212,6 +231,11 @@ export class DeckScene extends Phaser.Scene {
   }
 
   private battle() {
+    const tutorial = getProfile().tutorial;
+    if (tutorial < TUTORIAL.length) {
+      this.scene.start('Battle', { deck: this.deck, difficulty: 'tutorial', tutorial });
+      return;
+    }
     const deck = this.deck;
     if (!isDeckComplete(deck)) {
       toast(this, `Complete o deck: ${BATTLE_RULES.deckSize} tropas e ${BATTLE_RULES.spellsPerMatch} magias`);
@@ -243,6 +267,7 @@ export class DeckScene extends Phaser.Scene {
 
   private refresh() {
     const save = getSave();
+    const p = save.profile;
     const deck = this.deck;
     const god = godById(deck.god)!;
 
@@ -261,12 +286,18 @@ export class DeckScene extends Phaser.Scene {
       const on = deck.spells.includes(id);
       row.icon.setText(s.icon);
       row.name.setText(s.name);
-      row.sub.setText(`${rarityById(s.rarity).name} · recarga ${s.cooldown}s`).setColor(rarityById(s.rarity).color);
+      const unlocked = isSpellUnlocked(p, id);
+      row.icon.setAlpha(unlocked ? 1 : 0.35);
+      row.name.setColor(unlocked ? '#ffffff' : '#64748b');
+      row.sub
+        .setText(unlocked ? `${rarityById(s.rarity).name} · Nv ${p.spells[id]?.level ?? 1} · recarga ${s.cooldown}s` : `🔒 Deus nível ${s.godLevel}`)
+        .setColor(unlocked ? rarityById(s.rarity).color : '#64748b');
       row.bg.setStrokeStyle(on ? 4 : 2, on ? COLORS.gold : 0x374151).setFillStyle(on ? 0x3b2f0b : 0x1f2937);
     });
 
     this.slots.forEach((slot, i) => {
-      slot.setUnit(deck.units[i] ? unitById(deck.units[i])! : null).setHighlight(this.selectedSlot === i);
+      const id = deck.units[i];
+      slot.setUnit(id ? unitById(id)! : null).setHighlight(this.selectedSlot === i).setLevel(id ? p.units[id]?.level ?? null : null);
     });
 
     const a = analyzeDeck(deck.units, deck.spells);
@@ -289,7 +320,7 @@ export class DeckScene extends Phaser.Scene {
       tile.setVisible(visible);
       if (!visible) continue;
       tile.setPosition(RIGHT_X + 40 + (n % 12) * 76, 395 + Math.floor(n / 12) * 100);
-      tile.setInDeck(deck.units.includes(u.id));
+      tile.setInDeck(deck.units.includes(u.id)).setLocked(!p.units[u.id]).setLevel(p.units[u.id]?.level ?? null);
       n++;
     }
   }

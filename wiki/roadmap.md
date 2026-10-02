@@ -34,12 +34,16 @@ Objetivo: a batalha do jogo final contra a IA, com o deck sugerido do deus escol
 
 Na v0.3, todas as tropas, deuses e magias ficam liberados. Os desbloqueios por troféus e o nível do deus entram na v0.4.
 
-## v0.4: progressão e economia
+## ✅ v0.4: progressão e economia (feito)
 
-- [ ] Níveis de tropa, magia, deus e conta
-- [ ] Troféus, arenas, baús com timer e baú grátis
-- [ ] Tela de resultado com recompensas
-- [ ] Tutorial (4 batalhas)
+- [x] Níveis de tropa, magia, deus e conta, aplicados na batalha (vida e dano, força das magias, vida do castelo)
+- [x] Coleção inicial (9 comuns + Ignar); tropas, deuses e magias bloqueados até serem conquistados
+- [x] Troféus, arenas, desbloqueio de deuses, baús com tempo (um abrindo por vez) e baú grátis
+- [x] Tela de resultado com recompensas, nova arena e novo deus
+- [x] Tela de Deuses e magias; upgrade de tropas na Coleção
+- [x] Tutorial (4 batalhas guiadas)
+- [x] IA ajustada à arena e ao nível do jogador
+- [x] Save v2 com migração da v1
 
 ## v0.5: arte, som e celular
 

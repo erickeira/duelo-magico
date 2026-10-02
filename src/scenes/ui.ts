@@ -1,6 +1,9 @@
 import Phaser from 'phaser';
 import { COLORS, W } from '../config';
-import { rarityById, type UnitDef } from '../data/content';
+import { ARENAS, chestById, rarityById, spellById, unitById, type UnitDef } from '../data/content';
+import type { ChestReward } from '../meta/chests';
+import { accountProgress, currentArena } from '../meta/progress';
+import { getProfile } from '../save/save';
 
 export const hex = (css: string) => Number.parseInt(css.slice(1), 16);
 
@@ -58,6 +61,9 @@ export class UnitTile extends Phaser.GameObjects.Container {
   private cost: Phaser.GameObjects.Text;
   private gem: Phaser.GameObjects.Arc;
   private mark: Phaser.GameObjects.Text;
+  private levelText: Phaser.GameObjects.Text;
+  private lock: Phaser.GameObjects.Text;
+  private upArrow: Phaser.GameObjects.Text;
   private highlighted = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number, readonly w: number, readonly h: number) {
@@ -69,8 +75,11 @@ export class UnitTile extends Phaser.GameObjects.Container {
       .setOrigin(0.5);
     this.gem = scene.add.circle(-w / 2 + 12, -h / 2 + 12, 12, COLORS.mana).setStrokeStyle(2, 0xffffff);
     this.cost = scene.add.text(this.gem.x, this.gem.y, '', { fontSize: '15px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5);
-    this.mark = scene.add.text(w / 2 - 6, -h / 2 + 4, '', { fontSize: '16px', color: '#4ade80', fontStyle: 'bold' }).setOrigin(1, 0);
-    this.add([this.bg, this.icon, this.label, this.gem, this.cost, this.mark]);
+    this.mark = scene.add.text(0, -h / 2 + 2, '', { fontSize: '14px', color: '#4ade80', fontStyle: 'bold' }).setOrigin(0.5, 0);
+    this.levelText = scene.add.text(w / 2 - 4, -h / 2 + 3, '', { fontSize: '12px', fontStyle: 'bold', color: '#fde68a' }).setOrigin(1, 0);
+    this.upArrow = scene.add.text(w / 2 - 4, h * 0.12, '', { fontSize: '16px', fontStyle: 'bold', color: '#4ade80' }).setOrigin(1, 0.5);
+    this.lock = scene.add.text(0, -h * 0.1, '', { fontSize: `${Math.round(h * 0.28)}px` }).setOrigin(0.5);
+    this.add([this.bg, this.icon, this.label, this.gem, this.cost, this.mark, this.levelText, this.upArrow, this.lock]);
     this.setSize(w, h);
     this.setInteractive({ useHandCursor: true });
     scene.add.existing(this);
@@ -92,6 +101,26 @@ export class UnitTile extends Phaser.GameObjects.Container {
     return this;
   }
 
+  /** Nível da carta (null = não mostrar). */
+  setLevel(level: number | null) {
+    this.levelText.setText(level ? `Nv${level}` : '');
+    return this;
+  }
+
+  /** Tropa ainda não conquistada: aparece apagada, com cadeado. */
+  setLocked(on: boolean) {
+    this.lock.setText(on ? '🔒' : '');
+    this.icon.setAlpha(on ? 0.25 : 1);
+    this.label.setAlpha(on ? 0.5 : 1);
+    return this;
+  }
+
+  /** Seta verde quando dá para subir de nível. */
+  setUpgradable(on: boolean) {
+    this.upArrow.setText(on ? '▲' : '');
+    return this;
+  }
+
   /** Marca a tropa como já presente no deck. */
   setInDeck(on: boolean) {
     this.mark.setText(on ? '✓' : '');
@@ -103,4 +132,59 @@ export class UnitTile extends Phaser.GameObjects.Container {
     const color = this.highlighted ? COLORS.gold : this.unit ? hex(rarityById(this.unit.rarity).color) : 0x374151;
     this.bg.setStrokeStyle(this.highlighted ? 5 : 3, color);
   }
+}
+
+/** Barra superior com nível de conta, troféus/arena, ouro e essência. Retorna uma função para atualizar. */
+export function resourceBar(scene: Phaser.Scene, y = 24): () => void {
+  scene.add.rectangle(W / 2, y, W, 48, 0x111827).setDepth(100);
+  const level = scene.add.text(16, y, '', { fontSize: '18px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0, 0.5).setDepth(101);
+  const xpBar = scene.add.graphics().setDepth(101);
+  const trophies = scene.add.text(380, y, '', { fontSize: '18px', fontStyle: 'bold', color: '#fde68a' }).setOrigin(0, 0.5).setDepth(101);
+  const money = scene.add.text(W - 16, y, '', { fontSize: '20px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(1, 0.5).setDepth(101);
+  return () => {
+    const p = getProfile();
+    const xp = accountProgress(p.xp);
+    level.setText(`👤 Nv ${xp.level}`);
+    xpBar.clear();
+    xpBar.fillStyle(0x000000, 0.6).fillRoundedRect(110, y - 7, 200, 14, 6);
+    xpBar.fillStyle(0x38bdf8).fillRoundedRect(110, y - 7, xp.needed ? Math.max(4, (200 * xp.current) / xp.needed) : 200, 14, 6);
+    const arena = currentArena(p);
+    const next = ARENAS[arena.index + 1];
+    trophies.setText(`🏆 ${p.trophies}${next ? ` / ${next.trophies}` : ''}   ${arena.icon} ${arena.name}`);
+    money.setText(`🪙 ${p.gold}    ✴️ ${p.essence}`);
+  };
+}
+
+/** Janela com o conteúdo de um baú aberto. */
+export function showChestReward(scene: Phaser.Scene, r: ChestReward, onClose: () => void) {
+  const chest = chestById(r.chest)!;
+  const layer = scene.add.container(0, 0).setDepth(300);
+  const shade = scene.add.rectangle(W / 2, 360, W, 720, 0x000000, 0.7).setInteractive();
+  const box = scene.add.rectangle(W / 2, 360, 900, 560, 0x111827).setStrokeStyle(4, COLORS.gold);
+  const title = scene.add.text(W / 2, 120, `${chest.icon} ${chest.name}`, { fontSize: '34px', fontStyle: 'bold', color: '#facc15' }).setOrigin(0.5);
+  const totals = scene.add
+    .text(W / 2, 170, `🪙 +${r.gold} ouro     ✴️ +${r.essence} essência     🃏 ${r.cards.reduce((s, c) => s + c.count, 0)} cartas`, {
+      fontSize: '22px', color: '#ffffff',
+    })
+    .setOrigin(0.5);
+  layer.add([shade, box, title, totals]);
+  r.cards.slice(0, 14).forEach((c, i) => {
+    const def = unitById(c.id)!;
+    const x = W / 2 + ((i % 7) - 3) * 116;
+    const y = 270 + Math.floor(i / 7) * 130;
+    const tile = new UnitTile(scene, x, y, 96, 112).setUnit(def);
+    tile.disableInteractive();
+    const count = scene.add
+      .text(x, y + 66, c.isNew ? `NOVA! ×${c.count}` : `×${c.count}`, { fontSize: '16px', fontStyle: 'bold', color: c.isNew ? '#4ade80' : '#ffffff' })
+      .setOrigin(0.5);
+    layer.add([tile, count]);
+  });
+  const frags = r.fragments.map((f) => `${spellById(f.id)!.icon} ${spellById(f.id)!.name} +${f.count}`).join('     ');
+  if (frags) layer.add(scene.add.text(W / 2, 545, `🔹 Fragmentos: ${frags}`, { fontSize: '18px', color: '#bae6fd' }).setOrigin(0.5));
+  const ok = button(scene, W / 2, 600, 'OK', COLORS.player, () => {
+    layer.destroy();
+    onClose();
+  }, { w: 200, h: 56 });
+  layer.add(ok);
+  return layer;
 }

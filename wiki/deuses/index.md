@@ -7,7 +7,7 @@ Antes de cada partida você escolhe **um deus**. Ele define quais **magias** voc
 ## Como funcionam
 
 - **5 magias por deus:** 2 comuns, 2 raras e 1 épica.
-- As magias são **liberadas pelo nível do deus**: comuns nos níveis 1 e 2, raras nos níveis 4 e 6, épica no nível 8.
+- As magias são **liberadas pelo nível do deus**: as duas comuns no nível 1 (para toda partida ter 2 magias desde o início), raras nos níveis 4 e 6, épica no nível 8.
 - Cada magia tem o **próprio nível (1 a 5)**, subido com fragmentos e ouro. Nos níveis 3 e 5 ela ganha **evoluções** (efeitos extras).
 - Cada nível do deus também aumenta em **2%** a vida do seu castelo.
 - O deus não aparece em campo: ele é o patrono do duelista. Visualmente, a escolha muda a cor do castelo e o retrato no HUD.

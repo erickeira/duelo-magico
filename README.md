@@ -3,7 +3,7 @@
 Jogo mobile de estratégia em tempo real inspirado no gênero de **Heroic: Magic Duel**.
 Tela **horizontal**: seu castelo à esquerda, o do oponente à direita e três trilhas entre eles. Antes da partida você escolhe um **deus**, leva **duas magias** dele e um **deck de 8 tropas**, e vence quem derrubar o castelo inimigo.
 
-> Status: **v0.3**. Tela inicial, montagem de deck (5 decks salvos) e coleção; batalha completa com 4 deuses, 20 magias, 24 tropas e IA com 3 dificuldades; arte placeholder. A **wiki** descreve o jogo final.
+> Status: **v0.4**. Progressão completa: níveis de tropas, magias, deuses e conta, troféus, arenas, baús e tutorial. Também tem montagem de deck, coleção e batalha com 4 deuses, 20 magias, 24 tropas e IA com 3 dificuldades. A arte ainda é placeholder. A **wiki** descreve o jogo final.
 
 ## 📖 Wiki
 
@@ -35,7 +35,8 @@ npm run wiki:dev     # wiki em http://localhost:5181/duelo-magico/
 src/
   main.ts, config.ts       # configuração do Phaser e layout
   scenes/                  # início, montar deck, coleção, batalha e resultado
-  save/                    # salvamento local (decks, dificuldade)
+  save/                    # salvamento local (decks, dificuldade, perfil)
+  meta/                    # progressão, recompensas e baús
   battle/                  # tropas, castelo, habilidades, magias, IA, interface da batalha
   data/content/            # conteúdo do jogo: fonte única para wiki e jogo
 wiki/                      # site VitePress (páginas .md + componentes Vue)

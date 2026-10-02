@@ -16,6 +16,7 @@ src/data/content/
   economy.ts      # recursos, baús, recompensas, coleção inicial
   rules.ts        # regras da batalha (tempo, mana, deck, castelo)
   deck.ts         # analyzeDeck(): custo médio, antiaéreos, tanques, área e avisos
+  tutorial.ts     # as 4 batalhas do tutorial (decks, dicas, castelo da IA)
   index.ts        # exporta tudo + validateContent()
 ```
 

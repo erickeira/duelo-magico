@@ -13,6 +13,7 @@ export class CardView extends Phaser.GameObjects.Container {
   private label: Phaser.GameObjects.Text;
   private cost: Phaser.GameObjects.Text;
   private baseY: number;
+  private level: Phaser.GameObjects.Text;
   private rarityColor = 0x4b5563;
 
   constructor(scene: Phaser.Scene, x: number, y: number, small = false) {
@@ -27,14 +28,16 @@ export class CardView extends Phaser.GameObjects.Container {
     this.cost = scene.add
       .text(gem.x, gem.y, '', { fontSize: '20px', fontStyle: 'bold', color: '#ffffff' })
       .setOrigin(0.5);
-    this.add([this.bg, this.icon, this.label, gem, this.cost]);
+    this.level = scene.add.text(CARD_W / 2 - 6, -CARD_H / 2 + 6, '', { fontSize: '13px', fontStyle: 'bold', color: '#fde68a' }).setOrigin(1, 0);
+    this.add([this.bg, this.icon, this.label, gem, this.cost, this.level]);
     if (small) this.setScale(0.6);
     this.setSize(CARD_W, CARD_H);
     scene.add.existing(this);
     this.setDepth(50);
   }
 
-  setCard(card: UnitDef) {
+  setCard(card: UnitDef, level?: number) {
+    this.level.setText(level ? `Nv ${level}` : '');
     this.icon.setText(card.icon);
     this.label.setText(card.count > 1 ? `${card.name} ×${card.count}` : card.name);
     this.cost.setText(String(card.cost));

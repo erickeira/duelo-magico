@@ -23,9 +23,11 @@
    └─────────────────────────────────────────┘
 ```
 
-- `HomeScene`: deck ativo (setas trocam entre os 5), dificuldade e atalhos.
+- `HomeScene`: barra de recursos (nível de conta, troféus, ouro, essência), deck ativo, arena, dificuldade, 4 espaços de baú, baú grátis e atalhos. Enquanto o tutorial não acaba, o botão principal vira **TUTORIAL n/4**.
+- `GodsScene`: subir deuses (essência) e magias (fragmentos + ouro).
+- `ResultScene`: mostra as recompensas que o `BattleScene` já aplicou ao save (`applyBattleResult`).
 - `DeckScene`: abas dos 5 decks, deus (setas), 5 magias (escolhe 2), 8 espaços, coleção filtrável e análise do deck. Cada mudança vai direto para o save.
-- `CollectionScene`: grade das 24 tropas com ficha detalhada.
+- `CollectionScene`: grade das 24 tropas (bloqueadas com 🔒), ficha no nível atual e botão de subir de nível.
 - `scenes/ui.ts`: `button`, `toast`, `panel` e `UnitTile`, os componentes reutilizados pelas telas.
 - `BattleScene.init()` zera todo o estado, porque o Phaser reaproveita a instância da cena entre partidas.
 
@@ -42,27 +44,47 @@ y 550–720  [magia][magia]   próxima · mana · mão com 4 cartas
 
 ## Salvamento (`src/save/save.ts`)
 
-O estado fica em `localStorage`, na chave `duelo-magico:save`:
+O estado fica em `localStorage`, na chave `duelo-magico:save` (versão 2):
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "activeDeck": 0,
   "difficulty": "normal",
-  "decks": [{ "name": "Fornalha Inicial", "god": "ignar", "spells": ["cometa-rubro", "brado-guerra"], "units": ["cavaleiro", "..."] }]
+  "decks": [{ "name": "Fornalha Inicial", "god": "ignar", "spells": ["cometa-rubro", "brado-guerra"], "units": ["cavaleiro", "..."] }],
+  "profile": {
+    "gold": 100, "essence": 0, "trophies": 0, "bestTrophies": 0, "xp": 0,
+    "units": { "cavaleiro": { "level": 1, "cards": 0 } },
+    "gods": { "ignar": { "level": 1 } },
+    "spells": { "cometa-rubro": { "level": 1, "fragments": 0 } },
+    "chests": [{ "type": "prata", "readyAt": null }, null, null, null],
+    "freeChests": 1, "freeChestNextAt": 0,
+    "tutorial": 0,
+    "stats": { "wins": 0, "losses": 0, "draws": 0 }
+  }
 }
 ```
 
-- `getSave()` carrega uma vez e passa por `sanitizeDeck`. Ele remove ids que não existem, magias de outro deus e tropas repetidas, e corrige limites. Com JSON quebrado ou `localStorage` bloqueado, o jogo usa os decks padrão.
+- `getSave()` carrega uma vez. O perfil passa por `sanitizeProfile` (ids inexistentes saem, números ficam nos limites), e cada deck passa por `sanitizeDeck`, que tira tropas que o jogador não tem, magias bloqueadas ou de outro deus e repetidas. Com JSON quebrado ou `localStorage` bloqueado, o jogo começa do zero.
+- **Migração da v1** (v0.3): o perfil começa novo, os nomes dos decks e a dificuldade ficam, e decks com tropas ainda não conquistadas voltam ao deck inicial.
 - `updateSave(fn)` altera e grava. Se a gravação falhar, o jogo segue sem salvar.
 - Os decks padrão são os sugeridos dos deuses (`defaultDecks`).
 - Ao mudar o formato, aumente `version` e escreva a migração em `load()`.
+
+## Meta-jogo (`src/meta/`)
+
+| Arquivo | Responsabilidade |
+|---|---|
+| `progress.ts` | Nível de conta, custos e upgrades de tropas, deuses e magias, desbloqueio de deuses por troféus e `applyBattleResult` (troféus com piso da arena, ouro, essência, baú, tutorial). |
+| `chests.ts` | Sorteio do conteúdo (`rollChest`: garantidos + pesos por raridade, só tropas da arena), estados dos espaços (vazio, bloqueado, abrindo, pronto), um abrindo por vez e baú grátis acumulando a cada 4 h. |
+
+As funções recebem o `SaveData` ou o `Profile` e o tempo (`now`) como parâmetro, o que facilita testar o relógio sem esperar de verdade.
 
 ## Módulos da batalha (`src/battle/`)
 
 | Arquivo | Responsabilidade |
 |---|---|
-| `Loadout.ts` | O que cada lado leva: deus, 2 magias, 8 tropas e nível das magias. `loadoutFromDeck()` para o jogador; `loadoutForGod()` sorteia um deck sugerido para a IA. |
+| `Loadout.ts` | O que cada lado leva: deus, magias e níveis, tropas e níveis, e vida do castelo. `loadoutFromDeck()` lê o progresso do jogador; `enemyLoadout()` monta a IA na arena e no nível dele; `tutorialLoadouts()` monta as batalhas do tutorial; `scaledStats()` aplica +8% por nível. |
 | `Hand.ts` | Mana, mão de 4 cartas e fila (com `UnitDef`). |
 | `Unit.ts` | Uma tropa: atributos, vida, **escudo**, **status** com expiração, **buffs**, tempo de vida (construções e invocações) e desenho dos anéis de status. |
 | `Castle.ts` | Vida, cura, dano e barra no HUD. |

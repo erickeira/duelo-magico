@@ -10,7 +10,7 @@ interface Profile {
   reaction: [number, number];
   /** Mana mínima para iniciar um ataque. */
   attackMana: number;
-  usesSpells: 'comuns' | 'todas';
+  usesSpells: 'nenhuma' | 'comuns' | 'todas';
   /** Escolhe a resposta pelo "forte contra" das tropas. */
   usesCounters: boolean;
   /** Multiplicador dos limites de valor das magias (maior = mais exigente). */
@@ -21,6 +21,8 @@ const PROFILES: Record<Difficulty, Profile> = {
   facil: { reaction: [1.5, 2.5], attackMana: 9.5, usesSpells: 'comuns', usesCounters: false, spellBar: 1.6 },
   normal: { reaction: [0.5, 1.3], attackMana: 8.5, usesSpells: 'todas', usesCounters: false, spellBar: 1 },
   dificil: { reaction: [0.3, 0.8], attackMana: 7.5, usesSpells: 'todas', usesCounters: true, spellBar: 0.8 },
+  // Tutorial: joga devagar, só tropas e sem magias.
+  tutorial: { reaction: [3.5, 5], attackMana: 6, usesSpells: 'nenhuma', usesCounters: false, spellBar: 99 },
 };
 
 /**
@@ -42,7 +44,7 @@ export class Ai {
     const [min, max] = this.profile.reaction;
     this.thinkIn = min + Math.random() * (max - min);
 
-    if (this.trySpells()) return;
+    if (this.profile.usesSpells !== 'nenhuma' && this.trySpells()) return;
     if (this.tryDefend()) return;
     this.tryAttack();
   }

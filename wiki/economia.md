@@ -29,6 +29,9 @@ Você tem **4 espaços de baú**. Ao vencer com os espaços cheios, não ganha b
 - As cartas de um baú vêm da **arena atual e das anteriores**.
 - O **baú grátis** recarrega a cada 4 h e acumula até 2 (sempre um Baú de Madeira).
 - Os fragmentos vêm só de magias de **deuses que você já liberou**.
+- Se a raridade garantida ainda não existe na sua arena (por exemplo, raras na arena 1), as cartas vêm da melhor raridade disponível.
+- Tropas novas entram na coleção no nível inicial da raridade; as cartas repetidas vão para o próximo nível.
+- O tutorial não dá troféus: cada vitória rende 20 de ouro, e concluir rende um Baú de Prata (ver [Tutorial](/modos#tutorial)).
 
 ## Arenas {#arenas}
 

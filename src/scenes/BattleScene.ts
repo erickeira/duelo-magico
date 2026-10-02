@@ -502,7 +502,8 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
     if (this.textures.exists(key)) {
       const [top, bottom] = ARENA_ART.lanes;
       const sy = (LANES_Y[2] - LANES_Y[0]) / (bottom - top);
-      this.add.image(0, LANES_Y[0] - top * sy, key).setOrigin(0).setDisplaySize(W, this.textures.get(key).getSourceImage().height * sy);
+      const src = this.textures.get(key).getSourceImage();
+      this.add.image(0, LANES_Y[0] - top * sy, key).setOrigin(0).setDisplaySize(W, src.height * (W / src.width) * sy);
       return;
     }
     // Reserva: chão de grama (arte) ou verde liso, com as trilhas desenhadas.
@@ -620,7 +621,7 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
 
   private setupInput() {
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
-      if (this.dragging && p.isDown) this.ghost.setPosition(p.x, p.y).setVisible(this.inArena(p));
+      if (this.dragging && p.isDown) this.ghost.setPosition(p.worldX, p.worldY).setVisible(this.inArena(p));
       this.drawPreview(p);
     });
     this.input.on('pointerup', (p: Phaser.Input.Pointer) => {
@@ -647,19 +648,19 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
   }
 
   private inArena(p: Phaser.Input.Pointer) {
-    return p.y > HUD_HEIGHT && p.y < CARD_AREA_Y;
+    return p.worldY > HUD_HEIGHT && p.worldY < CARD_AREA_Y;
   }
 
   private tryUse(p: Phaser.Input.Pointer) {
     const sel = this.selection;
     if (!sel) return;
     if (sel.kind === 'card') {
-      if (this.playCard('player', sel.index, p.x, p.y)) this.selection = null;
+      if (this.playCard('player', sel.index, p.worldX, p.worldY)) this.selection = null;
       else this.floatText(W / 2, CARD_AREA_Y - 30, 'Mana insuficiente', '#e9d5ff');
     } else {
       const def = this.spells.player[sel.index].def;
-      if (this.castSpellAt('player', sel.index, p.x, p.y)) this.selection = null;
-      else if (def.target === 'aliado') this.floatText(p.x, p.y - 30, 'Escolha uma tropa sua', '#fde68a');
+      if (this.castSpellAt('player', sel.index, p.worldX, p.worldY)) this.selection = null;
+      else if (def.target === 'aliado') this.floatText(p.worldX, p.worldY - 30, 'Escolha uma tropa sua', '#fde68a');
     }
     this.refreshHud();
   }
@@ -668,28 +669,28 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
     const g = this.preview;
     g.clear();
     if (!this.selection || !this.inArena(p)) return;
-    const lane = this.laneAt(p.y);
+    const lane = this.laneAt(p.worldY);
     const laneTop = LANES_Y[lane] - LANE_HEIGHT / 2 + 25;
     if (this.selection.kind === 'card') {
       const [minX, maxX] = this.spawnZone('player', lane);
       g.fillStyle(0xffffff, 0.15).fillRect(minX, laneTop, maxX - minX, LANE_HEIGHT - 50);
-      const x = Phaser.Math.Clamp(p.x, minX, maxX);
+      const x = Phaser.Math.Clamp(p.worldX, minX, maxX);
       g.lineStyle(3, 0xffffff, 0.9).strokeCircle(x, LANES_Y[lane], 22);
       return;
     }
     const def = this.spells.player[this.selection.index].def;
     switch (def.target) {
       case 'ponto':
-        g.lineStyle(3, 0xffffff, 0.8).strokeCircle(p.x, p.y, def.radius ?? 80);
-        g.fillStyle(0xffffff, 0.12).fillCircle(p.x, p.y, def.radius ?? 80);
+        g.lineStyle(3, 0xffffff, 0.8).strokeCircle(p.worldX, p.worldY, def.radius ?? 80);
+        g.fillStyle(0xffffff, 0.12).fillCircle(p.worldX, p.worldY, def.radius ?? 80);
         break;
       case 'trilha':
         g.fillStyle(0xffffff, 0.15).fillRect(ARENA_LEFT, laneTop, ARENA_RIGHT - ARENA_LEFT, LANE_HEIGHT - 50);
         break;
       case 'aliado': {
-        const ally = pickAlly(this, 'player', p.x, p.y);
+        const ally = pickAlly(this, 'player', p.worldX, p.worldY);
         if (ally) g.lineStyle(4, COLORS.gold, 1).strokeCircle(ally.x, ally.y, ally.radius + 10);
-        else g.lineStyle(3, 0xef4444, 0.8).strokeCircle(p.x, p.y, 20);
+        else g.lineStyle(3, 0xef4444, 0.8).strokeCircle(p.worldX, p.worldY, 20);
         break;
       }
       default:

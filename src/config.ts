@@ -12,8 +12,8 @@ export const LANES_Y = [140, 300, 460];
 export const LANE_HEIGHT = 150;
 
 /**
- * Cenário pintado da arena (public/assets/arena/<id>.jpg, 1280 de largura). `lanes` são as linhas (em px da
- * imagem) do centro da trilha de cima e da de baixo; a imagem é esticada na vertical para elas caírem em LANES_Y.
+ * Cenário pintado da arena (public/assets/arena/<id>.jpg). `lanes` são as linhas do centro da trilha de cima e da de baixo, medidas
+ * com a imagem reduzida a 1280 de largura; a imagem é esticada na vertical para elas caírem em LANES_Y.
  */
 export const ARENA_ART = { id: 'forest', lanes: [218.6, 560.4] as const };
 

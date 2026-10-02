@@ -8,7 +8,7 @@ Saída (public/assets/):
   gods/<id>.png         retrato redondo do rosto (160×160)
   chests/<id>.png       baú com fundo transparente (até 256 px)
   ground/<id>.jpg       chão da arena (1280×720)
-  arena/<id>.jpg        cenário da batalha em 3/4, com as trilhas pintadas (1280 de largura)
+  arena/<id>.jpg        cenário da batalha em 3/4, com as trilhas pintadas (2560 de largura, para telas grandes)
 
 Uso: python3 scripts/process-ui.py
 """
@@ -65,7 +65,7 @@ def main() -> None:
         count += 1
     for f in sorted((RAW / "arena").glob("*.jpg")):
         img = Image.open(f).convert("RGB")
-        save(img.resize((1280, round(img.height * 1280 / img.width)), Image.LANCZOS), OUT / "arena" / f"{f.stem}.jpg", quality=86)
+        save(img.resize((2560, round(img.height * 2560 / img.width)), Image.LANCZOS), OUT / "arena" / f"{f.stem}.jpg", quality=86)
         count += 1
     print(f"{count} imagens de interface processadas")
 

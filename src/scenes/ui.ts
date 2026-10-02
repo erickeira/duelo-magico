@@ -4,6 +4,7 @@ import { ARENAS, chestById, rarityById, spellById, unitById, type UnitDef } from
 import type { ChestReward } from '../meta/chests';
 import { accountProgress, currentArena } from '../meta/progress';
 import { getProfile } from '../save/save';
+import { rarityFrame, type FrameObject } from './frames';
 import { cardKey, coverImage } from './PreloadScene';
 
 export const hex = (css: string) => Number.parseInt(css.slice(1), 16);
@@ -62,7 +63,12 @@ export class UnitTile extends Phaser.GameObjects.Container {
   private nameBar: Phaser.GameObjects.Rectangle;
   private label: Phaser.GameObjects.Text;
   private deckTint: Phaser.GameObjects.Rectangle;
+  /** Contorno simples: espaço vazio do deck ou reserva se a moldura ornamentada não carregar. */
   private frame: Phaser.GameObjects.Rectangle;
+  private ornament: FrameObject | null = null;
+  /** Brilho dourado em volta da carta selecionada. */
+  private glow: Phaser.GameObjects.Rectangle;
+  private readonly border: number;
   private cost: Phaser.GameObjects.Text;
   private gem: Phaser.GameObjects.Arc;
   private mark: Phaser.GameObjects.Text;
@@ -75,22 +81,24 @@ export class UnitTile extends Phaser.GameObjects.Container {
   constructor(scene: Phaser.Scene, x: number, y: number, readonly w: number, readonly h: number) {
     super(scene, x, y);
     const outline = { stroke: '#000000', strokeThickness: 3 };
+    this.border = Math.max(6, Math.round(w * 0.09));
     const barH = Math.max(18, Math.round(h * 0.2));
     this.bg = scene.add.rectangle(0, 0, w, h, 0x1f2937);
     this.icon = scene.add.text(0, -h * 0.1, '', { fontSize: `${Math.round(h * 0.36)}px` }).setOrigin(0.5);
-    this.nameBar = scene.add.rectangle(0, h / 2 - barH / 2 - 2, w - 4, barH, 0x000000, 0.65);
+    this.nameBar = scene.add.rectangle(0, h / 2 - barH / 2 - this.border + 2, w - this.border * 2 + 2, barH, 0x000000, 0.65);
     this.label = scene.add
-      .text(0, h / 2 - barH / 2 - 2, '', { fontSize: `${Math.max(10, Math.round(h * 0.1))}px`, fontStyle: 'bold', color: '#ffffff', align: 'center', wordWrap: { width: w - 6 } })
+      .text(0, h / 2 - barH / 2 - this.border + 2, '', { fontSize: `${Math.max(10, Math.round(h * 0.1))}px`, fontStyle: 'bold', color: '#ffffff', align: 'center', wordWrap: { width: w - 6 } })
       .setOrigin(0.5);
     this.deckTint = scene.add.rectangle(0, 0, w, h, 0x16a34a, 0.35).setVisible(false);
     this.frame = scene.add.rectangle(0, 0, w, h).setStrokeStyle(3, 0x4b5563);
+    this.glow = scene.add.rectangle(0, 0, w + 8, h + 8).setStrokeStyle(4, COLORS.gold).setVisible(false);
     this.gem = scene.add.circle(-w / 2 + 12, -h / 2 + 12, 12, COLORS.mana).setStrokeStyle(2, 0xffffff);
     this.cost = scene.add.text(this.gem.x, this.gem.y, '', { fontSize: '15px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5);
     this.mark = scene.add.text(0, -h / 2 + 2, '', { fontSize: '16px', color: '#4ade80', fontStyle: 'bold', ...outline }).setOrigin(0.5, 0);
     this.levelText = scene.add.text(w / 2 - 4, -h / 2 + 3, '', { fontSize: '12px', fontStyle: 'bold', color: '#fde68a', ...outline }).setOrigin(1, 0);
     this.upArrow = scene.add.text(w / 2 - 4, h * 0.12, '', { fontSize: '18px', fontStyle: 'bold', color: '#4ade80', ...outline }).setOrigin(1, 0.5);
     this.lock = scene.add.text(0, -h * 0.1, '', { fontSize: `${Math.round(h * 0.28)}px` }).setOrigin(0.5);
-    this.add([this.bg, this.icon, this.nameBar, this.label, this.deckTint, this.frame, this.gem, this.cost, this.mark, this.levelText, this.upArrow, this.lock]);
+    this.add([this.bg, this.icon, this.nameBar, this.label, this.deckTint, this.frame, this.glow, this.gem, this.cost, this.mark, this.levelText, this.upArrow, this.lock]);
     this.setSize(w, h);
     this.setInteractive({ useHandCursor: true });
     scene.add.existing(this);
@@ -99,8 +107,14 @@ export class UnitTile extends Phaser.GameObjects.Container {
   setUnit(unit: UnitDef | null) {
     if (unit?.id !== this.unit?.id) {
       this.art?.destroy();
-      this.art = unit ? coverImage(this.scene, cardKey(unit.id), this.w - 4, this.h - 4) : null;
+      const inset = Math.round(this.border * 0.5);
+      this.art = unit ? coverImage(this.scene, cardKey(unit.id), this.w - inset * 2, this.h - inset * 2) : null;
       if (this.art) this.addAt(this.art, 1);
+      if (unit?.rarity !== this.unit?.rarity) {
+        this.ornament?.destroy();
+        this.ornament = unit ? rarityFrame(this.scene, unit.rarity, this.w, this.h, this.border) : null;
+        if (this.ornament) this.addAt(this.ornament, this.getIndex(this.frame));
+      }
     }
     this.unit = unit;
     this.icon.setVisible(!this.art).setText(unit ? unit.icon : '+').setColor(unit ? '#ffffff' : '#4b5563');
@@ -151,11 +165,14 @@ export class UnitTile extends Phaser.GameObjects.Container {
     else this.art?.clearTint();
     this.icon.setAlpha(this.locked ? 0.25 : 1);
     this.label.setAlpha(this.locked ? 0.6 : 1);
+    this.ornament?.setAlpha(this.locked ? 0.55 : 1);
   }
 
   private redrawBorder() {
+    // Com moldura ornamentada, o contorno simples some e a seleção vira um brilho dourado por fora.
+    this.glow.setVisible(this.highlighted && !!this.ornament);
     const color = this.highlighted ? COLORS.gold : this.unit ? hex(rarityById(this.unit.rarity).color) : 0x374151;
-    this.frame.setStrokeStyle(this.highlighted ? 5 : 3, color);
+    this.frame.setStrokeStyle(this.highlighted ? 5 : 3, color).setVisible(!this.ornament);
   }
 }
 

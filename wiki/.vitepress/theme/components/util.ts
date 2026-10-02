@@ -35,4 +35,21 @@ export const TARGET_LABELS: Record<string, string> = {
   castelo: 'Castelo',
 };
 
+import frames from '../../../../public/assets/frames/frames.json';
+
+/**
+ * Estilo de uma arte com a moldura da raridade por cima (o equivalente CSS do nine-slice do jogo):
+ * a arte é o fundo do elemento e a moldura é desenhada no `::after` com `border-image` (ver .dm-art).
+ */
+export function framedArt(unitId: string, rarity: string, borderPx = 9): Record<string, string> {
+  const f = (frames as Record<string, { border: number; slice: number }>)[rarity];
+  const style: Record<string, string> = { backgroundImage: `url(${withBase(`/assets/cards/${unitId}.jpg`)})` };
+  if (!f) return style;
+  style['--frame-img'] = `url(${withBase(`/assets/frames/${rarity}.png`)})`;
+  style['--frame-slice'] = String(f.slice);
+  // A largura do border-image corresponde ao recorte inteiro; a borda visível sai com ~borderPx.
+  style['--frame-width'] = `${Math.round((borderPx * f.slice) / f.border)}px`;
+  return style;
+}
+
 export const dps = (damage: number, interval: number, count = 1) => Math.round((damage / interval) * count);

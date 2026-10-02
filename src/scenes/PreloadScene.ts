@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { COLORS, H, W } from '../config';
 import { UNITS } from '../data/content';
+import { FRAMES_JSON, RARITY_IDS, frameKey } from './frames';
 
 /** Carrega as artes das cartas e os tokens da batalha (public/assets), com barra de progresso. */
 export class PreloadScene extends Phaser.Scene {
@@ -22,6 +23,8 @@ export class PreloadScene extends Phaser.Scene {
     // Arte ausente não trava o jogo: as telas caem de volta no emoji.
     this.load.on('loaderror', (file: Phaser.Loader.File) => console.warn(`Arte não encontrada: ${file.src}`));
 
+    for (const r of RARITY_IDS) this.load.image(frameKey(r), `assets/frames/${r}.png`);
+    this.load.json(FRAMES_JSON, 'assets/frames/frames.json');
     for (const u of UNITS) {
       this.load.image(cardKey(u.id), `assets/cards/${u.id}.jpg`);
       this.load.image(tokenKey(u.id), `assets/tokens/${u.id}.png`);

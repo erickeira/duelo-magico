@@ -1,6 +1,6 @@
 # Arte e áudio
 
-As **24 tropas já têm arte** (geradas com o Gemini, ver abaixo). Deuses, magias, cenário, interface e áudio ainda usam placeholder. Esta página define o estilo e a lista de tudo que precisa ser produzido.
+As **24 tropas e as molduras das cartas já têm arte** (geradas com o Gemini, ver abaixo). Deuses, magias, cenário, o resto da interface e o áudio ainda usam placeholder. Esta página define o estilo e a lista de tudo que precisa ser produzido.
 
 ## Galeria das tropas
 
@@ -11,7 +11,23 @@ As **24 tropas já têm arte** (geradas com o Gemini, ver abaixo). Deuses, magia
 <script setup>
 import { withBase } from 'vitepress';
 import { UNITS } from '@content/index';
+import { framedArt } from './.vitepress/theme/components/util';
+
+const FRAME_SAMPLES = ['cavaleiro', 'cleriga', 'paladino', 'campea-do-sol'].map((id) => UNITS.find((u) => u.id === id));
 </script>
+
+## Molduras por raridade
+
+<div class="dm-gallery">
+  <div v-for="u in FRAME_SAMPLES" :key="u.id" class="dm-art" :style="framedArt(u.id, u.rarity, 10)" :title="u.rarity"></div>
+</div>
+
+| Raridade | Material |
+|---|---|
+| Comum | Pedra gasta e ferro escuro com rebites |
+| Rara | Prata polida com safiras azuis |
+| Épica | Ametista roxa com filigrana dourada |
+| Lendária | Ouro com raios de sol, chamas e âmbar |
 
 ## Como a arte das cartas é produzida {#producao}
 
@@ -23,6 +39,17 @@ import { UNITS } from '@content/index';
 4. **No jogo:** a `PreloadScene` carrega tudo. As cartas e miniaturas usam `coverImage()` (recorte tipo `object-fit: cover`), e a batalha mostra o token com um anel na cor do time; o token da IA é espelhado. Sem arte, tudo volta para o emoji.
 
 Para **regerar uma carta**, mude a descrição em `art/cards.prompts.json`, gere de novo com o mesmo modelo de texto, salve em `art/cards-raw/<id>.jpg` e rode `npm run art:process`.
+
+### Molduras
+
+1. **Prompts** em `art/frames.prompts.json`. O Gemini não gera transparência, então a moldura é pedida com o miolo e o lado de fora em **verde puro (#00FF00)**, como num fundo de chroma key.
+2. **Processamento** (`scripts/process-frames.py`, também rodado pelo `npm run art:process`):
+   - troca o verde por transparência, suavizando as bordas e tirando o reflexo verde;
+   - apara a sobra e reduz para 300 px de largura;
+   - mede a borda e grava `public/assets/frames/frames.json`, com a espessura média da borda (`border`) e o recorte de canto do nine-slice (`slice`, 1,5× a borda para incluir o ornamento).
+3. **No jogo:** `rarityFrame()` (`src/scenes/frames.ts`) monta a moldura como **nine-slice** (os cantos não distorcem) e aplica uma escala para a borda ter a espessura pedida, por exemplo 11 px nas cartas da batalha. Sem WebGL, a moldura é só esticada. A seleção vira um brilho dourado por fora da moldura.
+4. **Na wiki:** a mesma moldura entra via `border-image` do CSS (`framedArt()`).
+
 
 ::: tip Aprendizados da geração
 - Sem a frase "full-bleed… background touching all four edges", o Gemini desenha uma moldura de carta própria, que brigaria com a moldura do jogo.

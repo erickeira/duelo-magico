@@ -4,6 +4,7 @@ import { ARENAS, MAX_UNIT_LEVEL, ROLE_LABELS, UNITS, WORLDS, rarityById, spellBy
 import { scaledStats } from '../battle/Loadout';
 import { canUpgradeUnit, unitUpgradeCost, upgradeUnit } from '../meta/progress';
 import { getProfile, updateSave } from '../save/save';
+import { rarityFrame, type FrameObject } from './frames';
 import { cardKey, coverImage } from './PreloadScene';
 import { button, hex, panel, resourceBar, toast, UnitTile, type Button } from './ui';
 
@@ -22,6 +23,7 @@ export class CollectionScene extends Phaser.Scene {
   private detailIcon!: Phaser.GameObjects.Text;
   private detailArt: Phaser.GameObjects.Image | null = null;
   private artFrame!: Phaser.GameObjects.Rectangle;
+  private detailOrnament: FrameObject | null = null;
   private detailName!: Phaser.GameObjects.Text;
   private detailBody!: Phaser.GameObjects.Text;
   private detailMeta!: Phaser.GameObjects.Text;
@@ -119,6 +121,10 @@ export class CollectionScene extends Phaser.Scene {
     this.detailArt?.destroy();
     this.detailArt = coverImage(this, cardKey(u.id), 140, 188, 906, 170);
     if (this.detailArt && !owned) this.detailArt.setTint(0x3f3f46);
+    this.detailOrnament?.destroy();
+    this.detailOrnament = rarityFrame(this, u.rarity, 154, 202, 16);
+    this.detailOrnament?.setPosition(906, 170).setDepth(2);
+    this.artFrame.setVisible(!this.detailOrnament);
     this.detailIcon.setText(this.detailArt ? (owned ? '' : '🔒') : u.icon).setAlpha(owned || this.detailArt ? 1 : 0.35).setDepth(3);
     this.detailName.setText(`${u.name}${u.count > 1 ? ` ×${u.count}` : ''}\n${owned ? `Nível ${level}` : '🔒 Não conquistada'}`);
 

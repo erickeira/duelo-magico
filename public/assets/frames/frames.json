@@ -1,0 +1,26 @@
+{
+  "comum": {
+    "width": 300,
+    "height": 413,
+    "border": 59,
+    "slice": 94
+  },
+  "epica": {
+    "width": 300,
+    "height": 411,
+    "border": 42,
+    "slice": 66
+  },
+  "lendaria": {
+    "width": 300,
+    "height": 386,
+    "border": 51,
+    "slice": 78
+  },
+  "rara": {
+    "width": 300,
+    "height": 398,
+    "border": 44,
+    "slice": 66
+  }
+}

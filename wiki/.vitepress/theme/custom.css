@@ -182,12 +182,23 @@
 }
 
 .dm-art {
-  width: 96px;
-  height: 128px;
-  object-fit: cover;
-  border-radius: 8px;
-  border: 2px solid var(--dm-border);
+  position: relative;
+  width: 104px;
+  height: 138px;
   flex-shrink: 0;
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center 30%;
+}
+
+/* Moldura da raridade por cima da arte. */
+.dm-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-style: solid;
+  border-width: var(--frame-width, 0);
+  border-image: var(--frame-img) var(--frame-slice) / var(--frame-width) stretch;
 }
 
 .dm-gallery {

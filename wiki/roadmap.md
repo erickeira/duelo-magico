@@ -48,6 +48,7 @@ Na v0.3, todas as tropas, deuses e magias ficam liberados. Os desbloqueios por t
 ## v0.5: arte, som e celular
 
 - [x] Arte das 24 tropas (Gemini Nano Banana Pro): cartas, miniaturas, ficha da coleção, tokens na batalha e wiki ([como foi feita](/arte-audio#producao))
+- [x] Molduras ornamentadas por raridade (nine-slice) nas cartas, miniaturas, coleção e wiki
 - [ ] Arte dos deuses, magias, castelos, cenário e baús
 - [ ] Animações (Rive nas telas, a decidir) e efeitos visuais ([Arte e áudio](/arte-audio))
 - [ ] Música e efeitos sonoros

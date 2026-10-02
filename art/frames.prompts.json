@@ -1,0 +1,12 @@
+{
+  "model": "gemini-3-pro-image-preview",
+  "aspect_ratio": "3:4",
+  "image_size": "1K",
+  "template": "Ornate fantasy trading card frame, a 2D game UI asset for a mobile card game. Material: {material}. Decorative border only, about 7 percent of the image width thick on all four sides, with slightly bigger ornamented corners. The entire inside window of the frame is filled with perfectly flat solid pure green color #00FF00, and everything outside the frame is also perfectly flat solid pure green #00FF00. Front view, perfectly symmetrical, cartoon style with bold clean dark outlines and soft cel shading, matching vibrant cartoon fantasy art. No text, no letters, no characters, no creatures, nothing inside the window.",
+  "materials": {
+    "comum": "weathered grey stone and dark iron with simple rivets, sturdy and plain",
+    "rara": "polished silver metal with small blue sapphire gems at the corners and elegant engraved lines",
+    "epica": "rich purple amethyst crystal with gold filigree and glowing violet gems at the corners",
+    "lendaria": "radiant polished gold with sun ray ornaments, small orange flame details and bright amber gems at the corners, legendary and luxurious"
+  }
+}

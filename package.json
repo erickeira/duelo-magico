@@ -11,7 +11,7 @@
     "wiki:dev": "vitepress dev wiki --port 5181",
     "wiki:build": "npm run validate && vitepress build wiki",
     "wiki:preview": "vitepress preview wiki",
-    "art:process": "python3 scripts/process-cards.py"
+    "art:process": "python3 scripts/process-cards.py && python3 scripts/process-frames.py"
   },
   "dependencies": {
     "phaser": "^3.90.0"

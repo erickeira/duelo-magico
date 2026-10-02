@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, ref as vref } from 'vue';
-import { withBase } from 'vitepress';
 import { ARENAS, MAX_UNIT_LEVEL, UNITS, unitStatAt } from '@content/index';
-import { dps, fmt, rarityOf, ref, roleLabel, worldOf } from './util';
+import { dps, fmt, framedArt, rarityOf, ref, roleLabel, worldOf } from './util';
 
 const props = defineProps<{ id: string }>();
 const u = UNITS.find((x) => x.id === props.id)!;
@@ -18,7 +17,7 @@ const dmg = computed(() => unitStatAt(u.damage, rarity.startLevel, level.value))
   <div class="dm-card" :style="{ borderLeft: `4px solid ${rarity.color}` }">
     <div class="dm-cost" title="Custo em mana">{{ u.cost }}</div>
     <div class="dm-row">
-      <img :src="withBase(`/assets/cards/${u.id}.jpg`)" :alt="u.name" class="dm-art" loading="lazy" />
+      <div class="dm-art" role="img" :aria-label="u.name" :style="framedArt(u.id, u.rarity)"></div>
       <div>
         <strong style="font-size: 18px">{{ u.name }}</strong>
         <span v-if="u.count > 1" class="dm-muted"> × {{ u.count }}</span>

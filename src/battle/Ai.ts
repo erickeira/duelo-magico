@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ARENA_BOTTOM, ARENA_TOP, LANES_X, MID_Y } from '../config';
+import { ARENA_LEFT, ARENA_RIGHT, LANES_Y, MID_X } from '../config';
 import { SpellCard, UnitCard } from '../data/cards';
 import type { BattleScene } from '../scenes/BattleScene';
 import { Hand } from './Hand';
@@ -43,7 +43,7 @@ export class Ai {
     const threat = [0, 0, 0];
     const air = [false, false, false];
     for (const f of foes) {
-      const progress = (ARENA_BOTTOM - f.y) / (ARENA_BOTTOM - ARENA_TOP);
+      const progress = (f.x - ARENA_LEFT) / (ARENA_RIGHT - ARENA_LEFT);
       threat[f.lane] += f.hp * (0.5 + progress);
       if (f.flying) air[f.lane] = true;
     }
@@ -58,7 +58,7 @@ export class Ai {
         if (antiAir.length) options = antiAir;
       }
       const pick = options.reduce((a, b) => (b.card.cost > a.card.cost ? b : a));
-      this.scene.playCard('enemy', pick.index, LANES_X[lane], 0);
+      this.scene.playCard('enemy', pick.index, ARENA_RIGHT, LANES_Y[lane]);
       return;
     }
 
@@ -67,7 +67,7 @@ export class Ai {
       const pick = units[Math.floor(Math.random() * units.length)];
       const weakest = threat.indexOf(Math.min(...threat));
       const attackLane = defense.some((d) => d > 0) && Math.random() < 0.5 ? defense.indexOf(Math.max(...defense)) : weakest;
-      this.scene.playCard('enemy', pick.index, LANES_X[attackLane], 0);
+      this.scene.playCard('enemy', pick.index, ARENA_RIGHT, LANES_Y[attackLane]);
     }
   }
 
@@ -83,7 +83,8 @@ export class Ai {
           count++;
         }
       }
-      const value = card.freeze ? (center.y < MID_Y + 80 ? count : 0) : hp;
+      // Congelar só vale a pena quando as tropas já estão no lado da IA (direita).
+      const value = card.freeze ? (center.x > MID_X - 80 ? count : 0) : hp;
       if (value > bestValue) {
         bestValue = value;
         best = { x: center.x, y: center.y };

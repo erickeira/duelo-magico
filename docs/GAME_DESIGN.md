@@ -2,11 +2,15 @@
 
 Referência: *Heroic: Magic Duel* (Nordeus), PvP 1v1 em tempo real com partidas curtas em três trilhas.
 
+## Tela
+
+Paisagem (horizontal): o castelo do jogador fica à **esquerda**, o da IA à **direita**, com três trilhas horizontais entre eles. A vida dos castelos aparece no topo, e a mão de cartas e a mana ficam embaixo.
+
 ## Loop da partida
 
 1. Cada lado começa com **5 de mana** (máx. **10**), que regenera **1 a cada 1,4 s**.
 2. A mão tem **4 cartas**, e a próxima carta da fila fica visível. Ao usar uma carta, ela vai para o fim da fila e a próxima entra no lugar.
-3. Uma **tropa** surge na frente do seu castelo, na trilha escolhida, e anda em direção ao castelo inimigo.
+3. Uma **tropa** surge na frente do seu castelo, na trilha escolhida, e anda em direção ao castelo inimigo (jogador → direita, IA → esquerda).
 4. As tropas param e atacam o primeiro inimigo **à frente, na mesma trilha** e dentro do alcance. Sem inimigos à vista, atacam o castelo quando chegam até ele.
 5. O **castelo** também se defende: atira no inimigo mais próximo dentro de 240 px da sua frente, em qualquer trilha.
 6. A partida dura **3:00**. No **último minuto a mana regenera em dobro**.
@@ -48,7 +52,7 @@ Castelo: **3000** de vida, **45** de dano a cada **0,9 s**, alcance **240**.
 
 A IA "pensa" a cada 0,5–1,3 s e segue esta prioridade:
 
-1. **Feitiço:** procura o ponto onde o feitiço causaria mais dano útil. Usa a Bola de Fogo se o dano útil for de pelo menos 450, e o Congelar se pegar 3 ou mais tropas no campo dela.
+1. **Feitiço:** procura o ponto onde o feitiço causaria mais dano útil. Usa a Bola de Fogo se o dano útil for de pelo menos 450, e o Congelar se pegar 3 ou mais tropas já no lado dela da arena (metade direita).
 2. **Defesa:** calcula a ameaça por trilha (vida das tropas do jogador, com mais peso quanto mais perto do castelo da IA). Se a ameaça passa da defesa que a IA já tem na trilha, ela invoca a tropa mais cara que pode pagar ali, e prefere tropas antiaéreas se houver voadores.
 3. **Ataque:** com mana ≥ 8,5, invoca uma tropa aleatória, na trilha mais vazia ou reforçando um ataque em curso.
 

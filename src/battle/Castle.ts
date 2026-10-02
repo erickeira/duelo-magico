@@ -1,45 +1,48 @@
 import Phaser from 'phaser';
-import { ARENA_BOTTOM, ARENA_TOP, CASTLE_HP, COLORS, W } from '../config';
+import { ARENA_BOTTOM, ARENA_LEFT, ARENA_RIGHT, ARENA_TOP, CASTLE_HP, COLORS, HUD_HEIGHT, W } from '../config';
 import { Team } from '../data/cards';
 import { Damageable } from './Unit';
 
-const HEIGHT = 120;
+const WIDTH = 150;
+const HP_BAR_W = 380;
 
 export class Castle implements Damageable {
   hp = CASTLE_HP;
   alive = true;
   readonly flying = false;
   cooldown = 0;
-  /** Linha y onde as tropas inimigas param para atacar. */
+  /** Linha x onde as tropas inimigas param para atacar. */
   readonly front: number;
 
   private container: Phaser.GameObjects.Container;
+  private baseX: number;
   private hpBar: Phaser.GameObjects.Graphics;
   private hpText: Phaser.GameObjects.Text;
 
   constructor(private scene: Phaser.Scene, readonly team: Team) {
     const isPlayer = team === 'player';
-    this.front = isPlayer ? ARENA_BOTTOM : ARENA_TOP;
-    const cy = isPlayer ? ARENA_BOTTOM + HEIGHT / 2 : ARENA_TOP - HEIGHT / 2;
+    this.front = isPlayer ? ARENA_LEFT : ARENA_RIGHT;
+    const height = ARENA_BOTTOM - ARENA_TOP;
+    this.baseX = isPlayer ? ARENA_LEFT - WIDTH / 2 : ARENA_RIGHT + WIDTH / 2;
     const color = isPlayer ? COLORS.playerDark : COLORS.enemyDark;
     const accent = isPlayer ? COLORS.player : COLORS.enemy;
 
-    this.container = scene.add.container(W / 2, cy).setDepth(5);
-    const wall = scene.add.rectangle(0, 0, W - 20, HEIGHT, color).setStrokeStyle(4, accent);
-    this.container.add(wall);
+    this.container = scene.add.container(this.baseX, (ARENA_TOP + ARENA_BOTTOM) / 2).setDepth(5);
+    this.container.add(scene.add.rectangle(0, 0, WIDTH - 10, height, color).setStrokeStyle(4, accent));
 
     // Ameias na frente voltada para a arena.
-    const edge = isPlayer ? -HEIGHT / 2 - 8 : HEIGHT / 2 + 8;
-    for (let x = -W / 2 + 30; x < W / 2 - 20; x += 44) {
-      this.container.add(scene.add.rectangle(x, edge, 24, 16, accent));
+    const edge = isPlayer ? WIDTH / 2 + 4 : -WIDTH / 2 - 4;
+    for (let y = -height / 2 + 24; y < height / 2 - 10; y += 44) {
+      this.container.add(scene.add.rectangle(edge, y, 16, 24, accent));
     }
+    this.container.add(scene.add.text(0, 0, '🏰', { fontSize: '64px' }).setOrigin(0.5));
 
-    this.container.add(scene.add.text(0, isPlayer ? 8 : -8, '🏰', { fontSize: '56px' }).setOrigin(0.5));
-    this.hpBar = scene.add.graphics();
+    // A vida fica no HUD superior: jogador à esquerda, IA à direita.
+    this.hpBar = scene.add.graphics().setDepth(61);
     this.hpText = scene.add
-      .text(0, isPlayer ? 42 : -42, '', { fontSize: '20px', fontStyle: 'bold', color: '#ffffff' })
-      .setOrigin(0.5);
-    this.container.add([this.hpBar, this.hpText]);
+      .text(0, HUD_HEIGHT / 2, '', { fontSize: '20px', fontStyle: 'bold', color: '#ffffff' })
+      .setOrigin(0.5)
+      .setDepth(62);
     this.draw();
   }
 
@@ -47,8 +50,8 @@ export class Castle implements Damageable {
     return Math.max(0, this.hp) / CASTLE_HP;
   }
 
-  aimPoint(fromX: number) {
-    return { x: fromX, y: this.front + (this.team === 'player' ? 12 : -12) };
+  aimPoint(alongY: number) {
+    return { x: this.front + (this.team === 'player' ? -12 : 12), y: alongY };
   }
 
   takeDamage(amount: number) {
@@ -56,16 +59,19 @@ export class Castle implements Damageable {
     this.hp = Math.max(0, this.hp - amount);
     if (this.hp <= 0) this.alive = false;
     this.draw();
-    this.scene.tweens.add({ targets: this.container, x: W / 2 + 4, duration: 40, yoyo: true });
+    this.scene.tweens.add({ targets: this.container, x: this.baseX + 4, duration: 40, yoyo: true });
   }
 
   private draw() {
     const isPlayer = this.team === 'player';
-    const y = isPlayer ? 30 : -54;
-    const w = 300;
+    const x0 = isPlayer ? 70 : W - 70 - HP_BAR_W;
+    const y = HUD_HEIGHT / 2 - 12;
+    const fill = HP_BAR_W * this.ratio;
     this.hpBar.clear();
-    this.hpBar.fillStyle(0x000000, 0.6).fillRoundedRect(-w / 2, y, w, 24, 6);
-    this.hpBar.fillStyle(isPlayer ? 0x60a5fa : 0xf87171).fillRoundedRect(-w / 2, y, Math.max(1, w * this.ratio), 24, 6);
-    this.hpText.setY(y + 12).setText(`${Math.ceil(this.hp)}`);
+    this.hpBar.fillStyle(0x000000, 0.6).fillRoundedRect(x0, y, HP_BAR_W, 24, 6);
+    this.hpBar.fillStyle(isPlayer ? 0x60a5fa : 0xf87171);
+    // A barra da IA esvazia em direção à borda direita, espelhando a do jogador.
+    if (fill >= 1) this.hpBar.fillRoundedRect(isPlayer ? x0 : x0 + HP_BAR_W - fill, y, fill, 24, 6);
+    this.hpText.setX(x0 + HP_BAR_W / 2).setText(`${Math.ceil(this.hp)}`);
   }
 }

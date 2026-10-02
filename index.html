@@ -8,10 +8,16 @@
     <style>
       html, body { margin: 0; height: 100%; background: #0b1020; overflow: hidden; touch-action: none; }
       #game { width: 100%; height: 100%; }
+      /* O jogo é em paisagem: em celular na vertical, pede para girar o aparelho. */
+      #rotate { display: none; position: fixed; inset: 0; z-index: 10; background: #0b1020; color: #e5e7eb;
+        font: bold 22px system-ui, sans-serif; text-align: center; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+      #rotate span { font-size: 64px; }
+      @media (orientation: portrait) and (pointer: coarse) { #rotate { display: flex; } }
     </style>
   </head>
   <body>
     <div id="game"></div>
+    <div id="rotate"><span>📱↻</span>Gire o celular para jogar</div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

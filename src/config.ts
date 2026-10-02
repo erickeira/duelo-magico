@@ -1,14 +1,18 @@
-// Layout (retrato, 720x1280) e regras gerais da partida.
-export const W = 720;
-export const H = 1280;
+// Layout (paisagem, 1280x720) e regras gerais da partida.
+// O castelo do jogador fica à esquerda e o da IA à direita; as tropas andam no eixo X.
+export const W = 1280;
+export const H = 720;
 
-export const LANES_X = [150, 360, 570];
-export const LANE_WIDTH = 190;
+export const HUD_HEIGHT = 56;
+export const ARENA_TOP = 60;
+export const ARENA_BOTTOM = 540;
+export const LANES_Y = [140, 300, 460];
+export const LANE_HEIGHT = 150;
 
-export const ARENA_TOP = 200; // frente do castelo inimigo
-export const ARENA_BOTTOM = 940; // frente do castelo do jogador
-export const MID_Y = (ARENA_TOP + ARENA_BOTTOM) / 2;
-export const CARD_AREA_Y = 1060;
+export const ARENA_LEFT = 170; // frente do castelo do jogador
+export const ARENA_RIGHT = 1110; // frente do castelo inimigo
+export const MID_X = (ARENA_LEFT + ARENA_RIGHT) / 2;
+export const CARD_AREA_Y = 550;
 
 export const MATCH_TIME = 180;
 export const DOUBLE_MANA_AT = 60; // últimos N segundos com mana em dobro

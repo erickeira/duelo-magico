@@ -7,7 +7,8 @@ export interface Damageable {
   alive: boolean;
   flying: boolean;
   takeDamage(amount: number): void;
-  aimPoint(fromX: number): { x: number; y: number };
+  /** Ponto de mira; `along` é a coordenada y de quem atira (usada pelo castelo). */
+  aimPoint(along: number): { x: number; y: number };
 }
 
 const FLY_OFFSET = 22;
@@ -56,8 +57,9 @@ export class Unit extends Phaser.GameObjects.Container implements Damageable {
     scene.tweens.add({ targets: this, scale: 1, duration: 180, ease: 'Back.Out' });
   }
 
+  /** Sentido do avanço no eixo X: jogador vai para a direita, IA para a esquerda. */
   get dir(): number {
-    return this.team === 'player' ? -1 : 1;
+    return this.team === 'player' ? 1 : -1;
   }
 
   canHit(target: Damageable): boolean {
@@ -83,9 +85,8 @@ export class Unit extends Phaser.GameObjects.Container implements Damageable {
     this.ice.setVisible(on);
   }
 
-  lunge(dy: number) {
-    const inner = this.list[this.flying ? 1 : 0] as Phaser.GameObjects.Arc;
-    this.scene.tweens.add({ targets: inner, y: inner.y + dy * 8, duration: 80, yoyo: true });
+  lunge() {
+    this.scene.tweens.add({ targets: this.disc, x: this.dir * 8, duration: 80, yoyo: true });
   }
 
   private drawHp() {

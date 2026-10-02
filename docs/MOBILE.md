@@ -29,9 +29,10 @@ npx cap open ios       # Xcode: rodar no simulador/iPhone, Archive para a App St
 
 ## Ajustes recomendados
 
-- **Orientação travada em retrato**
-  - Android: em `android/app/src/main/AndroidManifest.xml`, na `<activity>`, use `android:screenOrientation="portrait"`.
-  - iOS: no Xcode, em *General → Deployment Info*, deixe marcado só **Portrait**.
+- **Orientação travada em paisagem** (o jogo é horizontal)
+  - Android: em `android/app/src/main/AndroidManifest.xml`, na `<activity>`, use `android:screenOrientation="sensorLandscape"`.
+  - iOS: no Xcode, em *General → Deployment Info*, deixe marcados só **Landscape Left** e **Landscape Right**.
+- **No navegador:** com o celular em pé, o `index.html` mostra o aviso "Gire o celular para jogar". Ao tocar em BATALHAR, o jogo tenta entrar em tela cheia e travar em paisagem (`screen.orientation.lock`). Isso funciona no Android/Chrome; o Safari do iPhone ignora o pedido.
 - **Tela cheia / status bar:** plugin `@capacitor/status-bar` com `StatusBar.hide()`.
 - **Áudio:** o iOS só libera áudio depois do primeiro toque. O Phaser já lida com isso (`sound.unlock`).
 - **Notch:** o `index.html` já usa `viewport-fit=cover`. Se o HUD ficar atrás do notch, adicione margens com `env(safe-area-inset-top)`.

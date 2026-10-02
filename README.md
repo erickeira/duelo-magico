@@ -1,7 +1,7 @@
 # Duelo Mágico
 
 Jogo mobile de estratégia em tempo real inspirado em **Heroic: Magic Duel** (Nordeus).
-Duas torres-castelo, três trilhas, mana que regenera e um deck de cartas: invoque tropas e lance feitiços para destruir o castelo do oponente antes que ele destrua o seu.
+Tela **horizontal (paisagem)**, como no Heroic: seu castelo à esquerda, o da IA à direita, três trilhas, mana que regenera e um deck de cartas: invoque tropas e lance feitiços para destruir o castelo do oponente antes que ele destrua o seu.
 
 > Status: **v0.1, protótipo jogável**. Batalha completa contra IA, com arte placeholder (formas e emojis).
 
@@ -27,7 +27,7 @@ Abra `http://localhost:5180` (ou a porta que o Vite mostrar). O servidor sobe co
 ## Como jogar
 
 - **Arraste** uma carta até uma trilha (ou toque na carta e depois na arena).
-- **Tropas** sempre saem do seu castelo, na trilha escolhida, e avançam sozinhas.
+- **Tropas** sempre saem do seu castelo (esquerda), na trilha escolhida, e avançam sozinhas para a direita.
 - **Feitiços** caem exatamente onde você soltar.
 - A mana regenera com o tempo (máx. 10). No **último minuto a mana enche em dobro**.
 - **Vitória:** destruir o castelo inimigo ou ter mais vida quando os 3:00 acabarem.
@@ -47,7 +47,7 @@ Abra `http://localhost:5180` (ou a porta que o Vite mostrar). O servidor sobe co
 ```
 src/
   main.ts              # configuração do Phaser e registro das cenas
-  config.ts            # layout da tela e regras globais (tempo, mana, castelo)
+  config.ts            # layout da tela (1280x720 paisagem) e regras globais
   data/cards.ts        # definição de todas as cartas e deck padrão
   battle/
     Hand.ts            # mana + mão + fila de cartas (lógica pura)

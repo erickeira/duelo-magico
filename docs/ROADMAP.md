@@ -4,7 +4,7 @@ O que existe hoje e o que falta para chegar perto do Heroic: Magic Duel.
 
 ## ✅ v0.1: protótipo da batalha (feito)
 
-- [x] Arena em retrato com 3 trilhas e 2 castelos
+- [x] Arena em paisagem (horizontal) com 3 trilhas e 2 castelos nas laterais
 - [x] Mana com regeneração e mana dobrada no último minuto
 - [x] Mão de 4 cartas, fila e próxima carta visível
 - [x] 6 tropas (corpo a corpo, à distância, tanque, enxame, área, voadora)

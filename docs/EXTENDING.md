@@ -22,7 +22,7 @@ Campos de `UnitStats`:
 | `damage` | Dano por ataque |
 | `attackInterval` | Segundos entre ataques |
 | `range` | Alcance (de borda a borda). Com **60 ou mais** o ataque vira projétil |
-| `speed` | px/s (a arena tem 740 px de altura) |
+| `speed` | px/s (a arena tem 940 px de largura, de castelo a castelo) |
 | `radius` | Tamanho do círculo e da colisão |
 | `splash` | Raio do dano em área (opcional) |
 | `flying` | Voa: só é atingido por quem tem `targetsAir` (opcional) |
@@ -56,7 +56,7 @@ Hoje cada tropa é um círculo colorido com um emoji (`Unit.ts`) e o castelo é 
 1. Coloque as imagens em `public/assets/` (ex.: `public/assets/units/knight.png`).
 2. Crie uma `PreloadScene` que carregue tudo (`this.load.image(...)` / `this.load.spritesheet(...)`) e registre essa cena antes da `MenuScene` em `main.ts`.
 3. Em `UnitStats`, troque `icon` por uma chave de textura (ex.: `sprite: 'knight'`).
-4. Em `Unit.ts`, substitua `circle` + `text` por `scene.add.sprite(0, lift, stats.sprite)` e use `setTint`/`setFlipY` para diferenciar os times, ou carregue versões azul e vermelha.
+4. Em `Unit.ts`, substitua `circle` + `text` por `scene.add.sprite(0, lift, stats.sprite)`. Desenhe os sprites olhando para a direita e use `setFlipX(team === 'enemy')` para a IA. Para diferenciar os times, use `setTint` ou carregue versões azul e vermelha.
 5. Para animações (andar e atacar), use `this.anims.create` na preload e `sprite.play('knight-walk')` no `updateUnit`/`attack`.
 
 A lógica não depende do visual. Só `Unit`, `Castle` e `CardView` precisam mudar.

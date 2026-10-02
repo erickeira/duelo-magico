@@ -117,3 +117,29 @@ Molduras de carta por raridade, gema de mana, barra de mana, baús (4 tipos × f
 - **Áudio:** bibliotecas com licença livre (ex.: freesound.org com CC0, Kenney).
 
 Como trocar os placeholders pelos sprites: ver [Como estender](/tecnico/estender#trocar-a-arte-placeholder-por-sprites).
+
+## Arena em 3/4 e tropas animadas a partir de vídeo (teste — branch `estilo-heroic`)
+
+**Arena.** Um cenário pintado em visão 3/4, com as três trilhas de pedra já desenhadas, gerado no Gemini (`gemini-3-pro-image-preview`, 16:9, 2K).
+- Fonte em `art/ui-raw/arena/forest.jpg`; o `scripts/process-ui.py` gera `public/assets/arena/forest.jpg` com 1280 px de largura.
+- Em `src/config.ts`, `ARENA_ART.lanes` guarda a linha (em px da imagem) do centro da trilha de cima e da de baixo. A batalha estica a imagem na vertical para essas linhas caírem em `LANES_Y`.
+- Sem a arte, o jogo volta ao chão de grama com as trilhas desenhadas.
+
+**Tropas animadas (vídeo → sprites).**
+1. Gerar um vídeo de 4 s no **Veo 3.1 Lite** (Composio `GEMINI_GENERATE_VIDEOS`, 720p, 16:9). No prompt:
+   - o personagem de perfil, olhando para a direita;
+   - câmera parada e fundo verde liso `#00FF00`;
+   - uma ação só por vídeo ("walks in place", "throws heavy punches to the right").
+   - Esse modelo não aceita `negative_prompt` nem imagem de referência.
+2. Salvar em `art/video-raw/<tropa>/<anim>.mp4`. A pasta é ignorada pelo git; o backup fica no Drive.
+3. Criar `art/video-raw/<tropa>/clips.json` com o trecho de cada animação: `{ "walk": { "start": 0.5, "end": 2.5, "frames": 16, "fps": 8, "loop": true } }`.
+4. Rodar `python3 scripts/process-video-sprites.py <tropa>`. O script:
+   - extrai os quadros com o ffmpeg;
+   - aplica um chroma key adaptado ao verde do vídeo (o Veo entrega um verde mais escuro que `#00FF00`);
+   - deixa todas as animações com o mesmo tamanho de corpo, alinhadas pelos pés;
+   - grava `public/assets/sprites/<tropa>/<anim>.png` e atualiza `public/assets/sprites/manifest.json`.
+5. O `PreloadScene` lê o manifest e cria as animações `<tropa>-<anim>`. O `Unit` toca `walk`, `attack`, `idle` (primeiro quadro da caminhada, se não houver um vídeo próprio) e `death`, se existir.
+
+Limitações atuais:
+- Cada vídeo é gerado só por texto, então o personagem pode variar um pouco entre caminhada e ataque.
+- O chroma key tira parte do verde do musgo.

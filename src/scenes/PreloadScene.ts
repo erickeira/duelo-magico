@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COLORS, H, W } from '../config';
+import { ARENA_ART, COLORS, H, W } from '../config';
 import { CHESTS, GODS, SPELLS, UNITS } from '../data/content';
 import { FRAMES_JSON, RARITY_IDS, frameKey } from './frames';
 
@@ -23,6 +23,15 @@ export class PreloadScene extends Phaser.Scene {
     // Arte ausente não trava o jogo: as telas caem de volta no emoji.
     this.load.on('loaderror', (file: Phaser.Loader.File) => console.warn(`Arte não encontrada: ${file.src}`));
 
+    // Sprites animadas (tools/sprite-renderer): o manifest diz quais tropas têm e as medidas das folhas.
+    this.load.json(SPRITES_JSON, 'assets/sprites/manifest.json');
+    this.load.on(`filecomplete-json-${SPRITES_JSON}`, (_key: string, _type: string, data: SpriteManifest) => {
+      for (const [id, m] of Object.entries(data)) {
+        for (const anim of Object.keys(m.anims)) {
+          this.load.spritesheet(spriteSheetKey(id, anim), `assets/sprites/${id}/${anim}.png`, { frameWidth: m.frameWidth, frameHeight: m.frameHeight });
+        }
+      }
+    });
     for (const r of RARITY_IDS) this.load.image(frameKey(r), `assets/frames/${r}.png`);
     this.load.json(FRAMES_JSON, 'assets/frames/frames.json');
     for (const s of SPELLS) {
@@ -37,6 +46,7 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image(castleKey('player'), 'assets/castles/player.png');
     this.load.image(castleKey('enemy'), 'assets/castles/enemy.png');
     this.load.image(GROUND_KEY, 'assets/ground/meadow.jpg');
+    this.load.image(arenaKey(ARENA_ART.id), `assets/arena/${ARENA_ART.id}.jpg`);
     for (const u of UNITS) {
       this.load.image(cardKey(u.id), `assets/cards/${u.id}.jpg`);
       this.load.image(tokenKey(u.id), `assets/tokens/${u.id}.png`);
@@ -44,6 +54,18 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   create() {
+    // Animações globais do Phaser, com a chave `<tropa>-<animação>`.
+    for (const [id, m] of Object.entries(spriteManifest(this))) {
+      for (const [anim, a] of Object.entries(m.anims)) {
+        if (!this.textures.exists(spriteSheetKey(id, anim))) continue;
+        this.anims.create({
+          key: spriteAnimKey(id, anim),
+          frames: this.anims.generateFrameNumbers(spriteSheetKey(id, anim), { start: 0, end: a.frames - 1 }),
+          frameRate: a.fps,
+          repeat: a.loop ? -1 : 0,
+        });
+      }
+    }
     this.scene.start('Home');
   }
 }
@@ -56,6 +78,23 @@ export const godFaceKey = (id: string) => `god-face-${id}`;
 export const chestKey = (id: string) => `chest-${id}`;
 export const castleKey = (team: 'player' | 'enemy') => `castle-${team}`;
 export const GROUND_KEY = 'ground-meadow';
+export const arenaKey = (id: string) => `arena-${id}`;
+
+/** Medidas das folhas de sprites (scripts/process-video-sprites.py) (public/assets/sprites/manifest.json). */
+export interface SpriteInfo {
+  frameWidth: number;
+  frameHeight: number;
+  /** Ponto do chão (pés) dentro do quadro, de 0 a 1. */
+  anchorX: number;
+  anchorY: number;
+  anims: Record<string, { frames: number; fps: number; loop: boolean }>;
+}
+export type SpriteManifest = Record<string, SpriteInfo>;
+
+export const SPRITES_JSON = 'sprite-manifest';
+export const spriteSheetKey = (id: string, anim: string) => `sprite-${id}-${anim}`;
+export const spriteAnimKey = (id: string, anim: string) => `${id}-${anim}`;
+export const spriteManifest = (scene: Phaser.Scene): SpriteManifest => (scene.cache.json.get(SPRITES_JSON) as SpriteManifest | undefined) ?? {};
 export const tokenKey = (id: string) => `token-${id}`;
 
 /**

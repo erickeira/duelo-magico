@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import {
   ARENA_BOTTOM, ARENA_LEFT, ARENA_RIGHT, ARENA_TOP, CARD_AREA_Y, CASTLE_ATTACK_INTERVAL, CASTLE_DAMAGE, CASTLE_RANGE,
-  COLORS, DOUBLE_MANA_AT, H, HAND_SIZE, HUD_HEIGHT, LANES_Y, LANE_HEIGHT, MANA_PER_SEC, MATCH_TIME, MAX_MANA, MID_X, OVERTIME,
+  ARENA_ART, COLORS, DOUBLE_MANA_AT, H, HAND_SIZE, HUD_HEIGHT, LANES_Y, LANE_HEIGHT, MANA_PER_SEC, MATCH_TIME, MAX_MANA, MID_X, OVERTIME,
   SPAWN_MARGIN, W, other, type Team,
 } from '../config';
 import { BATTLE_RULES, TUTORIAL, godById, spellById, type SpellDef, type UnitDef } from '../data/content';
@@ -17,7 +17,7 @@ import { activeDeck, getProfile, getSave, updateSave } from '../save/save';
 import { SpellButton } from '../battle/SpellButton';
 import { castSpell, pickAlly } from '../battle/spells';
 import { Unit, type StatusKind, type UnitStats } from '../battle/Unit';
-import { GROUND_KEY, coverImage, godFaceKey } from './PreloadScene';
+import { GROUND_KEY, arenaKey, coverImage, godFaceKey } from './PreloadScene';
 import { ArtIcon } from './ui';
 
 interface Projectile {
@@ -324,7 +324,9 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
       }
     }
 
-    if (!u.canAct(this.now)) return;
+    const acting = u.canAct(this.now);
+    u.freezeAnim(!acting); // congelada/atordoada: a animação para no quadro atual
+    if (!acting) return;
     ABILITIES[u.stats.id]?.onTick?.(u, this, dt);
     if (!u.alive) return;
 
@@ -333,11 +335,17 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
     if (target) {
       if (u.cooldown <= 0) {
         u.cooldown = u.attackInterval(this.now);
+        u.playAttack(u.cooldown);
         this.attack(u, target);
-      }
+      } else u.setAnim('idle');
       return;
     }
-    if (!u.canMove(this.now)) return;
+    if (!u.canMove(this.now)) {
+      u.setAnim('idle');
+      return;
+    }
+    // O ciclo de passos acompanha a velocidade atual (lentidão, buffs).
+    u.setAnim('walk', u.moveSpeed(this.now) / u.stats.speed);
     u.x += u.dir * u.moveSpeed(this.now) * dt;
     const enemyFront = this.castles[other(u.team)].front;
     u.x = u.dir > 0 ? Math.min(u.x, enemyFront - u.radius) : Math.max(u.x, enemyFront + u.radius);
@@ -450,8 +458,11 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
     this.units = this.units.filter((u) => u.alive);
     for (const u of dead) {
       if (!u.ability.expired) ABILITIES[u.stats.id]?.onDeath?.(u, this);
-      const puff = this.add.circle(u.x, u.y, u.radius, 0xffffff, 0.6).setDepth(15);
-      this.tweens.add({ targets: puff, scale: 1.8, alpha: 0, duration: 250, onComplete: () => puff.destroy() });
+      // Tropas com sprite tocam a queda; as outras somem numa nuvem.
+      if (!u.playDeath()) {
+        const puff = this.add.circle(u.x, u.y, u.radius, 0xffffff, 0.6).setDepth(15);
+        this.tweens.add({ targets: puff, scale: 1.8, alpha: 0, duration: 250, onComplete: () => puff.destroy() });
+      }
       u.destroy();
     }
   }
@@ -496,7 +507,16 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
 
   private drawArena() {
     this.add.rectangle(W / 2, H / 2, W, H, 0x0b1020);
-    // Chão de grama (arte) ou verde liso como reserva.
+    this.preview = this.add.graphics().setDepth(40);
+    // Cenário pintado em 3/4 (as trilhas já fazem parte da arte), esticado na vertical para alinhar com LANES_Y.
+    const key = arenaKey(ARENA_ART.id);
+    if (this.textures.exists(key)) {
+      const [top, bottom] = ARENA_ART.lanes;
+      const sy = (LANES_Y[2] - LANES_Y[0]) / (bottom - top);
+      this.add.image(0, LANES_Y[0] - top * sy, key).setOrigin(0).setDisplaySize(W, this.textures.get(key).getSourceImage().height * sy);
+      return;
+    }
+    // Reserva: chão de grama (arte) ou verde liso, com as trilhas desenhadas.
     if (coverImage(this, GROUND_KEY, W, ARENA_BOTTOM - ARENA_TOP, W / 2, (ARENA_TOP + ARENA_BOTTOM) / 2)) {
       // A grama tem muito detalhe: um véu escuro deixa tropas e trilhas mais legíveis.
       this.add.rectangle(W / 2, (ARENA_TOP + ARENA_BOTTOM) / 2, W, ARENA_BOTTOM - ARENA_TOP, 0x0b1020, 0.28);
@@ -510,7 +530,6 @@ export class BattleScene extends Phaser.Scene implements BattleApi {
     }
     g.lineStyle(3, 0xffffff, 0.25);
     for (let y = ARENA_TOP + 10; y < ARENA_BOTTOM; y += 30) g.lineBetween(MID_X, y, MID_X, y + 15);
-    this.preview = this.add.graphics().setDepth(40);
   }
 
   private createHud() {

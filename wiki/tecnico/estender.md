@@ -60,14 +60,18 @@ Efeitos que duram (chão em brasa, algo que atravessa a trilha, efeitos atrasado
 
 Depois de mudar, meça com a [simulação IA × IA](/tecnico/arquitetura#simulacao).
 
-## Trocar a arte placeholder por sprites
+## Arte das tropas
 
-Hoje cada tropa é um círculo colorido (quadrado para construções) com um emoji (`Unit.ts`), e o castelo é um retângulo (`Castle.ts`).
+As tropas já têm arte: carta (`public/assets/cards/<id>.jpg`) e token da batalha (`public/assets/tokens/<id>.png`), carregados pela `PreloadScene` com as chaves `card-<id>` e `token-<id>`. Uma tropa nova só precisa da imagem com o mesmo id; sem ela, o jogo mostra o emoji. O passo a passo da geração está em [Arte e áudio](/arte-audio#producao).
 
-1. Coloque as imagens em `public/assets/` (ex.: `public/assets/units/cavaleiro.png`).
-2. Crie uma `PreloadScene` que carregue tudo (`this.load.image(...)` / `this.load.spritesheet(...)`) e registre essa cena antes da `MenuScene` em `main.ts`.
-3. Use o próprio id da tropa como chave da textura, para não precisar de campo novo nos dados.
-4. Em `Unit.ts`, substitua o `body_` + `icon` por `scene.add.sprite(0, lift, stats.id)`. Desenhe os sprites olhando para a direita e use `setFlipX(team === 'enemy')` para a IA. Para diferenciar os times, use `setTint` ou carregue versões azul e vermelha.
+## Trocar os tokens por sprites animados
+
+Hoje cada tropa em campo é um token redondo parado (`Unit.ts`), e o castelo é um retângulo (`Castle.ts`).
+
+1. Coloque as folhas de sprites em `public/assets/` (ex.: `public/assets/units/cavaleiro.png`).
+2. Carregue-as na `PreloadScene` com `this.load.spritesheet(...)`, ao lado das cartas e tokens.
+3. Use o próprio id da tropa na chave da textura, para não precisar de campo novo nos dados.
+4. Em `Unit.ts`, troque o `portrait` (token) por `scene.add.sprite(0, lift, ...)`. Desenhe os sprites olhando para a direita e use `setFlipX(team === 'enemy')` para a IA, como já é feito com o token.
 5. Para animações (andar e atacar), use `this.anims.create` na preload e `sprite.play('cavaleiro-andar')` no `updateUnit`/`attack`.
 
 A lógica não depende do visual. Só `Unit`, `Castle`, `CardView` e `SpellButton` precisam mudar.

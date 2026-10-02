@@ -1,6 +1,34 @@
 # Arte e áudio
 
-Hoje o jogo usa **formas e emojis** como placeholder. Esta página define o estilo final e a lista de tudo que precisa ser produzido.
+As **24 tropas já têm arte** (geradas com o Gemini, ver abaixo). Deuses, magias, cenário, interface e áudio ainda usam placeholder. Esta página define o estilo e a lista de tudo que precisa ser produzido.
+
+## Galeria das tropas
+
+<div class="dm-gallery">
+  <img v-for="u in UNITS" :key="u.id" :src="withBase(`/assets/cards/${u.id}.jpg`)" :alt="u.name" :title="u.name" loading="lazy" />
+</div>
+
+<script setup>
+import { withBase } from 'vitepress';
+import { UNITS } from '@content/index';
+</script>
+
+## Como a arte das cartas é produzida {#producao}
+
+1. **Prompts** em `art/cards.prompts.json`: um modelo de texto comum (estilo, enquadramento, "sem moldura, sem texto"), o fundo de cada mundo e a descrição de cada tropa.
+2. **Geração** com o **Gemini Nano Banana Pro** (`gemini-3-pro-image-preview`, proporção 3:4, 1K), feita pelo Composio conectado ao Claude. As originais (896×1200) ficam em `art/cards-raw/`, que **não vai para o git**.
+3. **Processamento:** `npm run art:process` (`scripts/process-cards.py`) corta a borda e gera:
+   - `public/assets/cards/<id>.jpg`: arte da carta, 360×480;
+   - `public/assets/tokens/<id>.png`: token redondo para a batalha, 128×128 com fundo transparente.
+4. **No jogo:** a `PreloadScene` carrega tudo. As cartas e miniaturas usam `coverImage()` (recorte tipo `object-fit: cover`), e a batalha mostra o token com um anel na cor do time; o token da IA é espelhado. Sem arte, tudo volta para o emoji.
+
+Para **regerar uma carta**, mude a descrição em `art/cards.prompts.json`, gere de novo com o mesmo modelo de texto, salve em `art/cards-raw/<id>.jpg` e rode `npm run art:process`.
+
+::: tip Aprendizados da geração
+- Sem a frase "full-bleed… background touching all four edges", o Gemini desenha uma moldura de carta própria, que brigaria com a moldura do jogo.
+- Algumas imagens ainda vêm com uma borda fina. O script corta 2,5% de cada lado (5% na Campeã do Sol).
+- Cartas com várias unidades (Esqueletos ×4, Arqueiras ×2) devem dizer o número na descrição.
+:::
 
 ## Direção de arte
 

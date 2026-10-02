@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { COLORS, type Team } from '../config';
 import type { UnitDef } from '../data/content';
+import { tokenKey } from '../scenes/PreloadScene';
 
 /** Atributos de combate. Tropas do deck vêm de UnitDef; invocações de magias usam objetos próprios. */
 export type UnitStats = Pick<
@@ -68,11 +69,15 @@ export class Unit extends Phaser.GameObjects.Container implements Damageable {
   ability: Record<string, unknown> = {};
   readonly isBuilding: boolean;
   readonly radius: number;
+  /** Raio do desenho (token com arte é maior que o raio de colisão). */
+  private visualRadius: number;
 
   private statuses = new Map<StatusKind, { until: number; value: number }>();
   private hpBar: Phaser.GameObjects.Graphics;
   private fx: Phaser.GameObjects.Graphics;
   private body_: Phaser.GameObjects.Shape;
+  /** Retrato redondo da tropa (arte da carta); ausente em invocações sem arte. */
+  private portrait: Phaser.GameObjects.Image | null = null;
   private lift: number;
 
   constructor(
@@ -95,14 +100,29 @@ export class Unit extends Phaser.GameObjects.Container implements Damageable {
     const dark = team === 'player' ? COLORS.playerDark : COLORS.enemyDark;
 
     if (stats.flying) this.add(scene.add.ellipse(0, 6, this.radius * 1.6, this.radius * 0.7, 0x000000, 0.3));
+    // Com arte: anel na cor do time em volta do token. Sem arte (invocações de magia): círculo com emoji.
+    const hasArt = scene.textures.exists(tokenKey(stats.id));
+    // O token é desenhado 25% maior que o raio de colisão, para a arte ficar legível.
+    const art = Math.round(this.radius * 1.25);
+    const ring = hasArt ? art + 3 : this.radius;
+    this.visualRadius = ring;
     this.body_ = this.isBuilding
-      ? scene.add.rectangle(0, this.lift, this.radius * 2, this.radius * 2, color).setStrokeStyle(3, dark)
-      : scene.add.circle(0, this.lift, this.radius, color).setStrokeStyle(3, dark);
+      ? scene.add.rectangle(0, this.lift, ring * 2, ring * 2, color).setStrokeStyle(3, dark)
+      : scene.add.circle(0, this.lift, ring, color).setStrokeStyle(3, dark);
     if (summoned) this.body_.setAlpha(0.75);
-    const icon = scene.add.text(0, this.lift, stats.icon, { fontSize: `${Math.round(this.radius * 1.2)}px` }).setOrigin(0.5);
+    this.add(this.body_);
+    if (hasArt) {
+      this.portrait = scene.add.image(0, this.lift, tokenKey(stats.id)).setDisplaySize(art * 2, art * 2);
+      // A arte olha para a direita; as tropas da IA andam para a esquerda.
+      if (team === 'enemy') this.portrait.setFlipX(true);
+      if (summoned) this.portrait.setAlpha(0.8);
+      this.add(this.portrait);
+    } else {
+      this.add(scene.add.text(0, this.lift, stats.icon, { fontSize: `${Math.round(this.radius * 1.2)}px` }).setOrigin(0.5));
+    }
     this.fx = scene.add.graphics();
     this.hpBar = scene.add.graphics();
-    this.add([this.body_, icon, this.fx, this.hpBar]);
+    this.add([this.fx, this.hpBar]);
     this.drawHp();
 
     scene.add.existing(this);
@@ -219,13 +239,16 @@ export class Unit extends Phaser.GameObjects.Container implements Damageable {
 
   flash() {
     this.body_.setFillStyle(0xffffff);
+    this.portrait?.setTintFill(0xffffff);
     this.scene.time.delayedCall(70, () => {
-      if (this.active) this.body_.setFillStyle(this.team === 'player' ? COLORS.player : COLORS.enemy);
+      if (!this.active) return;
+      this.body_.setFillStyle(this.team === 'player' ? COLORS.player : COLORS.enemy);
+      this.portrait?.clearTint();
     });
   }
 
   lunge() {
-    this.scene.tweens.add({ targets: this.body_, x: this.dir * 8, duration: 80, yoyo: true });
+    this.scene.tweens.add({ targets: [this.body_, this.portrait].filter(Boolean), x: this.dir * 8, duration: 80, yoyo: true });
   }
 
   // ------------------------------------------------------------ visual
@@ -234,20 +257,20 @@ export class Unit extends Phaser.GameObjects.Container implements Damageable {
   redraw(now: number) {
     this.drawHp();
     const g = this.fx;
-    const r = this.radius + 4;
+    const r = this.visualRadius + 3;
     g.clear();
     if (this.shield && this.shield.until > now) g.lineStyle(3, 0xfef3c7, 0.9).strokeCircle(0, this.lift, r + 2);
     if (this.buffs.some((b) => b.until > now)) g.lineStyle(2, 0xf97316, 0.9).strokeCircle(0, this.lift, r + 6);
     if (this.has('freeze', now)) g.fillStyle(0x93c5fd, 0.55).fillCircle(0, this.lift, r);
-    else if (this.has('stun', now)) g.lineStyle(3, 0xfacc15, 1).strokeCircle(0, this.lift - this.radius - 4, 6);
-    if (this.has('root', now)) g.lineStyle(3, 0x16a34a, 1).strokeEllipse(0, this.radius - 2, r * 2, 10);
+    else if (this.has('stun', now)) g.lineStyle(3, 0xfacc15, 1).strokeCircle(0, this.lift - this.visualRadius - 4, 6);
+    if (this.has('root', now)) g.lineStyle(3, 0x16a34a, 1).strokeEllipse(0, this.visualRadius - 2, r * 2, 10);
     if (this.has('slow', now)) g.lineStyle(2, 0x7dd3fc, 0.9).strokeCircle(0, this.lift, r - 1);
     if (this.has('taunt', now)) g.lineStyle(2, 0xef4444, 0.7).strokeCircle(0, this.lift, r + 10);
   }
 
   private drawHp() {
-    const w = Math.max(24, this.radius * 2);
-    const top = this.lift - this.radius - 10;
+    const w = Math.max(24, this.visualRadius * 2);
+    const top = this.lift - this.visualRadius - 9;
     const pct = Math.max(0, this.hp / this.maxHp);
     this.hpBar.clear();
     this.hpBar.fillStyle(0x000000, 0.6).fillRect(-w / 2, top, w, 5);

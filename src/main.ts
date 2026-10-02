@@ -5,6 +5,7 @@ import { CollectionScene } from './scenes/CollectionScene';
 import { DeckScene } from './scenes/DeckScene';
 import { GodsScene } from './scenes/GodsScene';
 import { HomeScene } from './scenes/HomeScene';
+import { PreloadScene } from './scenes/PreloadScene';
 import { ResultScene } from './scenes/ResultScene';
 
 const game = new Phaser.Game({
@@ -18,7 +19,7 @@ const game = new Phaser.Game({
     height: H,
   },
   input: { activePointers: 2 },
-  scene: [HomeScene, DeckScene, CollectionScene, GodsScene, BattleScene, ResultScene],
+  scene: [PreloadScene, HomeScene, DeckScene, CollectionScene, GodsScene, BattleScene, ResultScene],
 });
 
 // Facilita depuração no console do navegador durante o desenvolvimento.

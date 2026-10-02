@@ -11,6 +11,8 @@ export default defineConfig({
   head: [['link', { rel: 'icon', href: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏰</text></svg>" }]],
 
   vite: {
+    // Usa a mesma pasta public/ do jogo: as artes das cartas aparecem na wiki sem duplicar arquivos.
+    publicDir: fileURLToPath(new URL('../../public', import.meta.url)),
     resolve: {
       // Os dados do jogo vêm direto do código: wiki e jogo usam a mesma fonte.
       alias: { '@content': fileURLToPath(new URL('../../src/data/content', import.meta.url)) },

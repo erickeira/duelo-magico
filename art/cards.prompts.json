@@ -1,0 +1,37 @@
+{
+  "model": "gemini-3-pro-image-preview",
+  "aspect_ratio": "3:4",
+  "image_size": "1K",
+  "template": "Full-bleed character illustration that fills the entire canvas edge to edge, the background touching all four edges of the image. Subject: {subject}. Stylized 2D cartoon fantasy art for a mobile strategy game: bold clean outlines, vibrant saturated colors, soft cel shading, slightly exaggerated proportions, dynamic pose, full body centered, three-quarter view facing right. Background: {background}, no scenery. Absolutely no card frame, no border, no rounded corners, no panel, no text, no letters, no watermark.",
+  "backgrounds": {
+    "solar": "soft radial gradient of warm gold and sky blue with a few light particles",
+    "abismo": "soft radial gradient of deep crimson red and dark purple with faint green embers",
+    "arcano": "soft radial gradient of cyan and violet with floating sparkles of arcane light"
+  },
+  "subjects": {
+    "cavaleiro": "a sturdy human knight in polished steel plate armor with golden trim, holding a longsword and a round shield with a sun emblem",
+    "arqueiras": "two young female archers in light leather armor with golden accents, drawing longbows side by side",
+    "lanceiros": "two human spearmen in blue tabards and steel helmets, holding long spears pointed upward",
+    "cleriga": "a kind female priestess in white and gold robes, holding a glowing sun staff radiating soft healing light",
+    "balestra": "a large wooden ballista siege weapon loaded with a steel bolt, golden sun decorations, mounted on a small stone base",
+    "paladino": "a massive paladin in heavy golden plate armor holding a warhammer and a tall tower shield, a glowing protective aura around him",
+    "grifo-real": "a royal griffin with white feathers, golden armor plates and spread wings, diving to attack",
+    "campea-do-sol": "a legendary female champion in radiant golden armor with a flowing red cape, raising a blazing sun sword, rays of light behind her",
+    "esqueletos": "four comical skeleton warriors with rusty swords and dented helmets, grinning and charging together",
+    "diabretes": "two small mischievous red winged imps with tiny horns, flying and throwing little fireballs",
+    "carnical": "a hunched hungry ghoul with grey-green skin, long claws and tattered clothes",
+    "bomba-ossos": "a funny walking bomb made of a sack of bones and black powder, with tiny skeletal legs and a lit fuse on top",
+    "necromante": "a pale necromancer in dark purple robes holding a skull staff with glowing green magic, bones rising from the ground",
+    "ceifador": "a hooded grim reaper with a huge curved scythe and glowing red eyes, tattered dark cloak",
+    "colosso-carne": "a gigantic stitched flesh golem with patchwork skin, chains and bone spikes, huge fists",
+    "dragao-osseo": "an ancient undead bone dragon with tattered wings, breathing necrotic green fire",
+    "aprendiz": "a young apprentice mage in blue robes with an oversized pointed hat, casting a small arcane bolt from a wand",
+    "elemental-agua": "a living water elemental made of swirling blue water with glowing white eyes",
+    "golem": "a huge stone golem made of carved blocks with glowing cyan runes, heavy fists",
+    "mago-batalha": "a battle mage in violet and cyan robes conjuring a large arcane fireball between his hands",
+    "fada": "a tiny prismatic fairy with rainbow crystal wings sprinkling shimmering magic dust",
+    "dragao-elemental": "a young dragon made of pure crackling blue energy and lightning, wings spread",
+    "torre-cristal": "a magical tower of floating cyan crystals channeling a concentrated beam of light",
+    "arquimaga": "a legendary archmage woman in flowing violet robes holding a giant glowing hourglass, clock runes floating around her"
+  }
+}

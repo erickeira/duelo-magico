@@ -4,6 +4,7 @@ import { ARENAS, chestById, rarityById, spellById, unitById, type UnitDef } from
 import type { ChestReward } from '../meta/chests';
 import { accountProgress, currentArena } from '../meta/progress';
 import { getProfile } from '../save/save';
+import { cardKey, coverImage } from './PreloadScene';
 
 export const hex = (css: string) => Number.parseInt(css.slice(1), 16);
 
@@ -52,12 +53,16 @@ export function panel(scene: Phaser.Scene, x: number, y: number, w: number, h: n
   return scene.add.rectangle(x, y, w, h, 0x111827).setStrokeStyle(2, stroke).setOrigin(0);
 }
 
-/** Miniatura de tropa: moldura da raridade, ícone, custo e nome. Também serve de espaço vazio do deck. */
+/** Miniatura de tropa: arte, moldura da raridade, custo e nome. Também serve de espaço vazio do deck. */
 export class UnitTile extends Phaser.GameObjects.Container {
   unit: UnitDef | null = null;
   private bg: Phaser.GameObjects.Rectangle;
+  private art: Phaser.GameObjects.Image | null = null;
   private icon: Phaser.GameObjects.Text;
+  private nameBar: Phaser.GameObjects.Rectangle;
   private label: Phaser.GameObjects.Text;
+  private deckTint: Phaser.GameObjects.Rectangle;
+  private frame: Phaser.GameObjects.Rectangle;
   private cost: Phaser.GameObjects.Text;
   private gem: Phaser.GameObjects.Arc;
   private mark: Phaser.GameObjects.Text;
@@ -65,32 +70,45 @@ export class UnitTile extends Phaser.GameObjects.Container {
   private lock: Phaser.GameObjects.Text;
   private upArrow: Phaser.GameObjects.Text;
   private highlighted = false;
+  private locked = false;
 
   constructor(scene: Phaser.Scene, x: number, y: number, readonly w: number, readonly h: number) {
     super(scene, x, y);
-    this.bg = scene.add.rectangle(0, 0, w, h, 0x1f2937).setStrokeStyle(3, 0x4b5563);
+    const outline = { stroke: '#000000', strokeThickness: 3 };
+    const barH = Math.max(18, Math.round(h * 0.2));
+    this.bg = scene.add.rectangle(0, 0, w, h, 0x1f2937);
     this.icon = scene.add.text(0, -h * 0.1, '', { fontSize: `${Math.round(h * 0.36)}px` }).setOrigin(0.5);
+    this.nameBar = scene.add.rectangle(0, h / 2 - barH / 2 - 2, w - 4, barH, 0x000000, 0.65);
     this.label = scene.add
-      .text(0, h / 2 - 16, '', { fontSize: `${Math.max(11, Math.round(h * 0.11))}px`, fontStyle: 'bold', color: '#e5e7eb', align: 'center', wordWrap: { width: w - 6 } })
+      .text(0, h / 2 - barH / 2 - 2, '', { fontSize: `${Math.max(10, Math.round(h * 0.1))}px`, fontStyle: 'bold', color: '#ffffff', align: 'center', wordWrap: { width: w - 6 } })
       .setOrigin(0.5);
+    this.deckTint = scene.add.rectangle(0, 0, w, h, 0x16a34a, 0.35).setVisible(false);
+    this.frame = scene.add.rectangle(0, 0, w, h).setStrokeStyle(3, 0x4b5563);
     this.gem = scene.add.circle(-w / 2 + 12, -h / 2 + 12, 12, COLORS.mana).setStrokeStyle(2, 0xffffff);
     this.cost = scene.add.text(this.gem.x, this.gem.y, '', { fontSize: '15px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5);
-    this.mark = scene.add.text(0, -h / 2 + 2, '', { fontSize: '14px', color: '#4ade80', fontStyle: 'bold' }).setOrigin(0.5, 0);
-    this.levelText = scene.add.text(w / 2 - 4, -h / 2 + 3, '', { fontSize: '12px', fontStyle: 'bold', color: '#fde68a' }).setOrigin(1, 0);
-    this.upArrow = scene.add.text(w / 2 - 4, h * 0.12, '', { fontSize: '16px', fontStyle: 'bold', color: '#4ade80' }).setOrigin(1, 0.5);
+    this.mark = scene.add.text(0, -h / 2 + 2, '', { fontSize: '16px', color: '#4ade80', fontStyle: 'bold', ...outline }).setOrigin(0.5, 0);
+    this.levelText = scene.add.text(w / 2 - 4, -h / 2 + 3, '', { fontSize: '12px', fontStyle: 'bold', color: '#fde68a', ...outline }).setOrigin(1, 0);
+    this.upArrow = scene.add.text(w / 2 - 4, h * 0.12, '', { fontSize: '18px', fontStyle: 'bold', color: '#4ade80', ...outline }).setOrigin(1, 0.5);
     this.lock = scene.add.text(0, -h * 0.1, '', { fontSize: `${Math.round(h * 0.28)}px` }).setOrigin(0.5);
-    this.add([this.bg, this.icon, this.label, this.gem, this.cost, this.mark, this.levelText, this.upArrow, this.lock]);
+    this.add([this.bg, this.icon, this.nameBar, this.label, this.deckTint, this.frame, this.gem, this.cost, this.mark, this.levelText, this.upArrow, this.lock]);
     this.setSize(w, h);
     this.setInteractive({ useHandCursor: true });
     scene.add.existing(this);
   }
 
   setUnit(unit: UnitDef | null) {
+    if (unit?.id !== this.unit?.id) {
+      this.art?.destroy();
+      this.art = unit ? coverImage(this.scene, cardKey(unit.id), this.w - 4, this.h - 4) : null;
+      if (this.art) this.addAt(this.art, 1);
+    }
     this.unit = unit;
-    this.icon.setText(unit ? unit.icon : '+').setColor(unit ? '#ffffff' : '#4b5563');
+    this.icon.setVisible(!this.art).setText(unit ? unit.icon : '+').setColor(unit ? '#ffffff' : '#4b5563');
+    this.nameBar.setVisible(!!unit);
     this.label.setText(unit ? unit.name : '');
     this.cost.setText(unit ? String(unit.cost) : '');
     this.gem.setVisible(!!unit);
+    this.applyLock();
     this.redrawBorder();
     return this;
   }
@@ -107,11 +125,10 @@ export class UnitTile extends Phaser.GameObjects.Container {
     return this;
   }
 
-  /** Tropa ainda não conquistada: aparece apagada, com cadeado. */
+  /** Tropa ainda não conquistada: aparece escurecida, com cadeado. */
   setLocked(on: boolean) {
-    this.lock.setText(on ? '🔒' : '');
-    this.icon.setAlpha(on ? 0.25 : 1);
-    this.label.setAlpha(on ? 0.5 : 1);
+    this.locked = on;
+    this.applyLock();
     return this;
   }
 
@@ -124,17 +141,24 @@ export class UnitTile extends Phaser.GameObjects.Container {
   /** Marca a tropa como já presente no deck. */
   setInDeck(on: boolean) {
     this.mark.setText(on ? '✓' : '');
-    this.bg.setFillStyle(on ? 0x14532d : 0x1f2937);
+    this.deckTint.setVisible(on);
     return this;
+  }
+
+  private applyLock() {
+    this.lock.setText(this.locked ? '🔒' : '');
+    if (this.locked) this.art?.setTint(0x3f3f46);
+    else this.art?.clearTint();
+    this.icon.setAlpha(this.locked ? 0.25 : 1);
+    this.label.setAlpha(this.locked ? 0.6 : 1);
   }
 
   private redrawBorder() {
     const color = this.highlighted ? COLORS.gold : this.unit ? hex(rarityById(this.unit.rarity).color) : 0x374151;
-    this.bg.setStrokeStyle(this.highlighted ? 5 : 3, color);
+    this.frame.setStrokeStyle(this.highlighted ? 5 : 3, color);
   }
 }
 
-/** Barra superior com nível de conta, troféus/arena, ouro e essência. Retorna uma função para atualizar. */
 export function resourceBar(scene: Phaser.Scene, y = 24): () => void {
   scene.add.rectangle(W / 2, y, W, 48, 0x111827).setDepth(100);
   const level = scene.add.text(16, y, '', { fontSize: '18px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0, 0.5).setDepth(101);

@@ -4,6 +4,7 @@ import { ARENAS, MAX_UNIT_LEVEL, ROLE_LABELS, UNITS, WORLDS, rarityById, spellBy
 import { scaledStats } from '../battle/Loadout';
 import { canUpgradeUnit, unitUpgradeCost, upgradeUnit } from '../meta/progress';
 import { getProfile, updateSave } from '../save/save';
+import { cardKey, coverImage } from './PreloadScene';
 import { button, hex, panel, resourceBar, toast, UnitTile, type Button } from './ui';
 
 const COLS = 6;
@@ -19,8 +20,11 @@ export class CollectionScene extends Phaser.Scene {
   private selected: UnitDef = UNITS[0];
   private detailFrame!: Phaser.GameObjects.Rectangle;
   private detailIcon!: Phaser.GameObjects.Text;
+  private detailArt: Phaser.GameObjects.Image | null = null;
+  private artFrame!: Phaser.GameObjects.Rectangle;
   private detailName!: Phaser.GameObjects.Text;
   private detailBody!: Phaser.GameObjects.Text;
+  private detailMeta!: Phaser.GameObjects.Text;
   private upgradeBtn!: Button;
 
   constructor() {
@@ -56,9 +60,11 @@ export class CollectionScene extends Phaser.Scene {
     }
 
     this.detailFrame = panel(this, 820, 58, 444, 648);
-    this.detailIcon = this.add.text(870, 104, '', { fontSize: '60px' }).setOrigin(0.5);
-    this.detailName = this.add.text(915, 84, '', { fontSize: '24px', fontStyle: 'bold', color: '#ffffff', wordWrap: { width: 330 } });
-    this.detailBody = this.add.text(836, 150, '', { fontSize: '14px', color: '#e2e8f0', wordWrap: { width: 412 }, lineSpacing: 4 });
+    this.detailIcon = this.add.text(906, 170, '', { fontSize: '60px' }).setOrigin(0.5);
+    this.artFrame = this.add.rectangle(906, 170, 146, 194).setStrokeStyle(3, 0x4b5563).setDepth(2);
+    this.detailName = this.add.text(990, 82, '', { fontSize: '22px', fontStyle: 'bold', color: '#ffffff', wordWrap: { width: 260 } });
+    this.detailBody = this.add.text(836, 278, '', { fontSize: '13px', color: '#e2e8f0', wordWrap: { width: 412 }, lineSpacing: 3 });
+    this.detailMeta = this.add.text(990, 150, '', { fontSize: '14px', color: '#cbd5e1', wordWrap: { width: 260 }, lineSpacing: 4 });
     this.upgradeBtn = button(this, 1042, 666, '', 0x15803d, () => this.upgrade(), { w: 400, h: 54, fontSize: 19 });
     this.refresh();
   }
@@ -109,7 +115,11 @@ export class CollectionScene extends Phaser.Scene {
     const cost = unitUpgradeCost(p, u.id);
 
     this.detailFrame.setStrokeStyle(3, hex(rarity.color));
-    this.detailIcon.setText(u.icon).setAlpha(owned ? 1 : 0.35);
+    this.artFrame.setStrokeStyle(3, hex(rarity.color));
+    this.detailArt?.destroy();
+    this.detailArt = coverImage(this, cardKey(u.id), 140, 188, 906, 170);
+    if (this.detailArt && !owned) this.detailArt.setTint(0x3f3f46);
+    this.detailIcon.setText(this.detailArt ? (owned ? '' : '🔒') : u.icon).setAlpha(owned || this.detailArt ? 1 : 0.35).setDepth(3);
     this.detailName.setText(`${u.name}${u.count > 1 ? ` ×${u.count}` : ''}\n${owned ? `Nível ${level}` : '🔒 Não conquistada'}`);
 
     const progress = !owned
@@ -117,10 +127,10 @@ export class CollectionScene extends Phaser.Scene {
       : cost
         ? `🃏 Cartas ${owned.cards}/${cost.cards}   ·   próximo nível: +8% vida e dano`
         : `Nível máximo (${MAX_UNIT_LEVEL})!`;
+    this.detailMeta.setText(
+      `${rarity.name}\n${world.icon} ${world.name}\n💧 ${u.cost} de mana\n${u.roles.map((r) => ROLE_LABELS[r]).join(', ')}${u.targetsAir && !u.flying ? '\nAcerta voadores' : ''}`,
+    ).setColor(rarity.color);
     const lines = [
-      `${rarity.name} · ${world.icon} ${world.name} · 💧 ${u.cost} de mana`,
-      u.roles.map((r) => ROLE_LABELS[r]).join(', ') + (u.targetsAir && !u.flying ? ' · acerta voadores' : ''),
-      '',
       progress,
       '',
       u.description,

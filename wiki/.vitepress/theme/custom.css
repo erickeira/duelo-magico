@@ -1,0 +1,182 @@
+:root {
+  --vp-c-brand-1: #b45309;
+  --vp-c-brand-2: #d97706;
+  --vp-c-brand-3: #f59e0b;
+  --vp-c-brand-soft: rgba(245, 158, 11, 0.14);
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(120deg, #f97316 20%, #facc15 50%, #38bdf8 80%);
+  --dm-card-bg: var(--vp-c-bg-soft);
+  --dm-border: var(--vp-c-divider);
+}
+
+.dark {
+  --vp-c-brand-1: #fbbf24;
+  --vp-c-brand-2: #f59e0b;
+  --vp-c-brand-3: #d97706;
+}
+
+/* ---- componentes da wiki ---- */
+.dm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.dm-card {
+  border: 1px solid var(--dm-border);
+  border-radius: 12px;
+  background: var(--dm-card-bg);
+  padding: 16px;
+  position: relative;
+}
+
+.dm-card h3,
+.dm-card h4 {
+  margin: 0 0 4px;
+  border: 0;
+  padding: 0;
+}
+
+.dm-card p {
+  margin: 8px 0;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.dm-icon {
+  font-size: 36px;
+  line-height: 1;
+}
+
+.dm-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dm-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.dm-badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+
+.dm-cost {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #7c3aed;
+  color: #fff;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+
+.dm-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 6px;
+  margin: 10px 0;
+  font-size: 13px;
+}
+
+.dm-stats div {
+  background: var(--vp-c-bg);
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+
+.dm-stats b {
+  display: block;
+  font-size: 15px;
+}
+
+.dm-muted {
+  color: var(--vp-c-text-2);
+  font-size: 13px;
+}
+
+.dm-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.dm-filters select,
+.dm-filters input {
+  border: 1px solid var(--dm-border);
+  border-radius: 8px;
+  padding: 4px 8px;
+  background: var(--vp-c-bg);
+  font-size: 14px;
+}
+
+.dm-table-wrap {
+  overflow-x: auto;
+}
+
+.dm-table-wrap table {
+  display: table;
+  width: 100%;
+  font-size: 14px;
+}
+
+.dm-level {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.dm-level input {
+  flex: 1;
+}
+
+.dm-matrix td,
+.dm-matrix th {
+  text-align: center;
+  padding: 4px 6px !important;
+  font-size: 13px;
+}
+
+.dm-matrix .win {
+  background: rgba(34, 197, 94, 0.25);
+}
+
+.dm-matrix .lose {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+.dm-wire {
+  font-family: var(--vp-font-family-mono);
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+/* Mais espaço para tabelas e cards em telas largas. */
+@media (min-width: 1280px) {
+  .VPDoc.has-aside .content-container {
+    max-width: 880px !important;
+  }
+}
+
+.dm-table-wrap td:first-child {
+  white-space: nowrap;
+}

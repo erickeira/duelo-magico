@@ -4,8 +4,25 @@
     {
       "name": "duelo-magico",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "--port", "5180", "--strictPort"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5180",
+        "--strictPort"
+      ],
       "port": 5180
+    },
+    {
+      "name": "duelo-wiki",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "wiki:dev"
+      ],
+      "port": 5181,
+      "url": "http://localhost:5181"
     }
   ]
 }

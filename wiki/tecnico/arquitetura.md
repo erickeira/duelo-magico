@@ -1,5 +1,9 @@
 # Arquitetura
 
+::: info
+Descreve o código do **protótipo (v0.1)**. A organização dos dados do jogo final está em [Dados do jogo](/tecnico/dados).
+:::
+
 ## Stack
 
 - **Phaser 3**: renderização (WebGL/Canvas), cenas, tweens e input por toque e mouse.
@@ -96,5 +100,5 @@ b.units.map(u => [u.team, u.stats.icon, u.hp]);
 
 - **Sem física:** movimento e colisão são 1D (eixo x) por trilha, o que deixa a simulação simples e determinística o bastante para multiplayer no futuro.
 - Tropas aliadas podem se sobrepor, porque não há empurrão entre elas.
-- A simulação usa `dt` variável. Para PvP online, o ideal é migrar para um passo fixo (ex.: 20 ticks/s) e separar a simulação da renderização (ver ROADMAP).
+- A simulação usa `dt` variável. Para PvP online, o ideal é migrar para um passo fixo (ex.: 20 ticks/s) e separar a simulação da renderização (ver [Roadmap](/roadmap#v3-pvp-online)).
 - O bundle tem cerca de 1,2 MB porque o Phaser inteiro vem junto. Dá para reduzir com um build customizado do Phaser se precisar.

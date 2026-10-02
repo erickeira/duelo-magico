@@ -1,2 +1,5 @@
 node_modules
 dist
+wiki/.vitepress/dist
+wiki/.vitepress/cache
+.DS_Store

@@ -1,5 +1,9 @@
 # Como estender
 
+::: warning Protótipo × versão alvo
+Esta página descreve o **protótipo atual (v0.1)**, que ainda lê as cartas de `src/data/cards.ts`. O conteúdo do jogo final (deuses, magias e 24 tropas) já está em `src/data/content/`: para mudar números ou criar conteúdo novo, veja [Dados do jogo](/tecnico/dados). Quando a v0.2 for implementada, o `cards.ts` deixa de existir.
+:::
+
 ## Adicionar uma carta de tropa
 
 1. Em `src/data/cards.ts`, adicione uma entrada em `CARDS`:
